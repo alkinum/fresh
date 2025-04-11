@@ -1,0 +1,329 @@
+import type { APIContext, APIRoute } from 'astro';
+import { z } from 'zod';
+import { NoteService } from '@/services/NoteService';
+import { NoteTagService } from '@/services/NoteTagService';
+import { handleError } from '@/utils/api';
+
+// Validation schemas
+const createNoteSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  content: z.string().min(1, 'Content is required'),
+  date: z.string().min(1, 'Date is required'),
+  colorIndicator: z.string().min(1, 'Color indicator is required'),
+  isFavorite: z.boolean().optional().default(false),
+});
+
+const updateNoteSchema = z.object({
+  title: z.string().min(1, 'Title is required').optional(),
+  content: z.string().optional(),
+  date: z.string().optional(),
+  colorIndicator: z.string().optional(),
+  isFavorite: z.boolean().optional(),
+});
+
+const idParamSchema = z.object({
+  id: z.string().uuid('Invalid note ID')
+});
+
+const queryParamsSchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().optional().default(20),
+  tagId: z.string().optional(),
+  isFavorite: z.enum(['true', 'false']).optional().transform(val => val === 'true'),
+});
+
+// Helper functions
+const extractTags = (content: string): string[] => {
+  const tagRegex = /#(\w+)/g;
+  const matches = [...content.matchAll(tagRegex)];
+  return [...new Set(matches.map(match => match[1]))];
+};
+
+export const GET: APIRoute = async ({ request, locals }: APIContext) => {
+  try {
+    if (!locals.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+
+    // Service initialization
+    const noteService = new NoteService(locals.runtime.env.DB);
+
+    // Get a single note by ID
+    if (id) {
+      const { id: validatedId } = idParamSchema.parse({ id });
+      const note = await noteService.getById(validatedId);
+
+      if (!note) {
+        return new Response(JSON.stringify({
+          error: 'Note not found'
+        }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Check if the note belongs to the current user
+      if (note.userId !== locals.user.id) {
+        return new Response(JSON.stringify({
+          error: 'Unauthorized'
+        }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      return new Response(JSON.stringify(note), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Get a list of notes with pagination and filtering
+    const params = Object.fromEntries(url.searchParams.entries());
+    const { page, limit, tagId, isFavorite } = queryParamsSchema.parse(params);
+
+    const notes = await noteService.list({
+      page,
+      limit,
+      userId: locals.user.id,
+      tagId,
+      isFavorite,
+    });
+
+    return new Response(JSON.stringify(notes), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+export const PUT: APIRoute = async ({ request, locals }: APIContext) => {
+  try {
+    if (!locals.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const data = await request.json();
+    const validatedData = createNoteSchema.parse(data);
+
+    const noteService = new NoteService(locals.runtime.env.DB);
+    const noteTagService = new NoteTagService(locals.runtime.env.DB);
+
+    // Create the note
+    const note = await noteService.create({
+      ...validatedData,
+      userId: locals.user.id,
+    });
+
+    // Extract and process tags from content
+    const tagNames = extractTags(validatedData.content);
+
+    // Create tags and link them to the note
+    for (const tagName of tagNames) {
+      // Check if tag already exists for this user
+      const existingTags = await noteTagService.list({
+        page: 1,
+        limit: 1,
+        userId: locals.user.id
+      });
+
+      const existingTag = existingTags.items.find(tag => tag.name === tagName);
+
+      if (!existingTag) {
+        // Create a new tag with a random color
+        const colors = ['red', 'blue', 'green', 'purple', 'orange', 'yellow'];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+        const tag = await noteTagService.create({
+          name: tagName,
+          color: randomColor,
+          userId: locals.user.id,
+        });
+
+        // Link the tag to the note
+        await noteTagService.addTagToNote(note.id, tag.id);
+      } else {
+        // Link the existing tag to the note
+        await noteTagService.addTagToNote(note.id, existingTag.id);
+      }
+    }
+
+    // Get the complete note with tags
+    const noteWithTags = await noteService.getById(note.id);
+
+    return new Response(JSON.stringify(noteWithTags), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+export const PATCH: APIRoute = async ({ request, locals }: APIContext) => {
+  try {
+    if (!locals.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    const { id: validatedId } = idParamSchema.parse({ id });
+
+    // Service initialization
+    // @ts-ignore - runtime exists on locals but TypeScript doesn't know about it
+    const noteService = new NoteService(locals.runtime.env.DB);
+    // @ts-ignore - runtime exists on locals but TypeScript doesn't know about it
+    const noteTagService = new NoteTagService(locals.runtime.env.DB);
+
+    // Check if note exists and belongs to the user
+    const existingNote = await noteService.getById(validatedId);
+    if (!existingNote) {
+      return new Response(JSON.stringify({
+        error: 'Note not found'
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (existingNote.userId !== locals.user.id) {
+      return new Response(JSON.stringify({
+        error: 'Unauthorized'
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const data = await request.json();
+    const validatedData = updateNoteSchema.parse(data);
+
+    // Update the note
+    const updatedNote = await noteService.update(validatedId, validatedData);
+
+    // If content was updated, process tags
+    if (validatedData.content) {
+      // Get current tags
+      const currentTags = await noteTagService.getTagsForNote(validatedId);
+      const currentTagNames = currentTags.map(tag => tag.name);
+
+      // Extract new tags from content
+      const newTagNames = extractTags(validatedData.content);
+
+      // Tags to add (new tags not in current tags)
+      const tagsToAdd = newTagNames.filter(tag => !currentTagNames.includes(tag));
+
+      // Tags to remove (current tags not in new tags)
+      const tagsToRemove = currentTags.filter(tag => !newTagNames.includes(tag.name));
+
+      // Process tag additions
+      for (const tagName of tagsToAdd) {
+        // Check if tag already exists for this user
+        const existingTags = await noteTagService.list({
+          page: 1,
+          limit: 1,
+          userId: locals.user.id
+        });
+
+        const existingTag = existingTags.items.find(tag => tag.name === tagName);
+
+        if (!existingTag) {
+          // Create a new tag with a random color
+          const colors = ['red', 'blue', 'green', 'purple', 'orange', 'yellow'];
+          const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+          const tag = await noteTagService.create({
+            name: tagName,
+            color: randomColor,
+            userId: locals.user.id,
+          });
+
+          // Link the tag to the note
+          await noteTagService.addTagToNote(validatedId, tag.id);
+        } else {
+          // Link the existing tag to the note
+          await noteTagService.addTagToNote(validatedId, existingTag.id);
+        }
+      }
+
+      // Process tag removals
+      for (const tag of tagsToRemove) {
+        await noteTagService.removeTagFromNote(validatedId, tag.id);
+      }
+
+      // Update lastModifiedAt for all associated tags
+      await noteTagService.updateLastModifiedForNote(validatedId);
+    }
+
+    // Get the updated note with tags
+    const noteWithTags = await noteService.getById(validatedId);
+
+    return new Response(JSON.stringify(noteWithTags), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+export const DELETE: APIRoute = async ({ request, locals }: APIContext) => {
+  try {
+    if (!locals.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    const { id: validatedId } = idParamSchema.parse({ id });
+
+    // Service initialization
+    // @ts-ignore - runtime exists on locals but TypeScript doesn't know about it
+    const noteService = new NoteService(locals.runtime.env.DB);
+
+    // Check if note exists and belongs to the user
+    const existingNote = await noteService.getById(validatedId);
+    if (!existingNote) {
+      return new Response(JSON.stringify({
+        error: 'Note not found'
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (existingNote.userId !== locals.user.id) {
+      return new Response(JSON.stringify({
+        error: 'Unauthorized'
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Delete the note (this will cascade to delete note_tags associations as well)
+    const success = await noteService.delete(validatedId);
+
+    return new Response(null, { status: 204 });
+  } catch (error) {
+    return handleError(error);
+  }
+};
