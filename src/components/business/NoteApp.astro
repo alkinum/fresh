@@ -1,0 +1,124 @@
+---
+// Astro components with Vue integration
+import Sidebar from './sidebar/Sidebar.vue';
+import NoteList from './notes/NoteList.vue';
+import NoteEditor from './editor/NoteEditor.vue';
+
+// Props definition
+interface Props {
+  username?: string;
+  initialPage?: string;
+}
+
+// Default props
+const { username = 'User123', initialPage = 'all-notes' } = Astro.props;
+
+// Client-side script will handle the interactive parts
+---
+
+<div class="flex flex-col md:flex-row h-screen" id="note-app">
+  <!-- Sidebar -->
+  <Sidebar username={username} visible={true} client:load />
+
+  <!-- Main content area -->
+  <div class="flex-1 flex flex-col overflow-hidden bg-background relative">
+    <!-- Subtle gradient overlay -->
+    <div class="absolute inset-0 bg-gradient-to-br from-primary-dark/5 to-background pointer-events-none"></div>
+
+    <!-- Mobile header with sidebar toggle -->
+    <div class="md:hidden flex items-center p-3 bg-surface shadow-md relative z-10">
+      <button class="text-secondary hover:text-primary" id="toggle-sidebar-btn">
+        <i class="fas fa-bars"></i>
+      </button>
+      <span class="ml-3 text-base font-medium">Notes</span>
+      <div class="ml-auto flex items-center space-x-2">
+        <button class="p-1.5 rounded-full hover:bg-surface-light text-secondary">
+          <i class="fas fa-search text-sm"></i>
+        </button>
+      </div>
+    </div>
+
+    <NoteEditor client:only />
+    <!-- Notes list component -->
+    <NoteList client:load />
+  </div>
+</div>
+
+<script>
+  // Client-side JavaScript for interactivity
+  document.addEventListener('DOMContentLoaded', () => {
+    let isSidebarVisible = true;
+    let currentPage = 'all-notes';
+
+    // Toggle sidebar function
+    const toggleSidebar = () => {
+      isSidebarVisible = !isSidebarVisible;
+
+      // Find the sidebar and dispatch custom event to it
+      const sidebar = document.querySelector('sidebar-component');
+      if (sidebar) {
+        sidebar.dispatchEvent(
+          new CustomEvent('toggle-visibility', {
+            detail: { visible: isSidebarVisible },
+          }),
+        );
+      }
+    };
+
+    // Event handler for sidebar toggle button
+    const sidebarToggleBtn = document.getElementById('toggle-sidebar-btn');
+    if (sidebarToggleBtn) {
+      sidebarToggleBtn.addEventListener('click', toggleSidebar);
+    }
+
+    // Interface for custom save note event
+    interface SaveNoteEvent extends CustomEvent {
+      detail: {
+        content: string;
+      };
+    }
+
+    // Handle save note
+    document.addEventListener('save-note', ((event: SaveNoteEvent) => {
+      const content = event.detail.content;
+      console.log('Saving note with content:', content);
+
+      // Show temporary save confirmation
+      const savedMessage = document.createElement('div');
+      savedMessage.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md z-50';
+      savedMessage.textContent = 'Note saved successfully!';
+      document.body.appendChild(savedMessage);
+
+      // Remove message after 3 seconds
+      setTimeout(() => {
+        document.body.removeChild(savedMessage);
+      }, 3000);
+    }) as EventListener);
+
+    // Interface for custom page switch event
+    interface SwitchPageEvent extends CustomEvent {
+      detail: {
+        pageId: string;
+      };
+    }
+
+    // Handle page switching
+    document.addEventListener('switch-page', ((event: SwitchPageEvent) => {
+      const pageId = event.detail.pageId;
+      console.log('Switching to page:', pageId);
+      currentPage = pageId;
+      // Additional page switching logic
+    }) as EventListener);
+
+    // Handle tag creation
+    document.addEventListener('create-tag', () => {
+      console.log('Creating new tag...');
+      // Tag creation logic
+    });
+  });
+</script>
+
+<style>
+  /* Any component-specific styles can go here */
+</style>
+
