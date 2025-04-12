@@ -4,14 +4,20 @@ import { notes, noteTags, tags, type NewNote, type Note } from '@/db/schema';
 import { getDb } from '@/db';
 import { CacheService } from '@/utils/cache';
 import type { GetNotesOptions, NoteWithTags, PaginatedResult } from '@/types/note';
+import { MarkdownRenderer } from '@/utils/markdown';
+import { StreamService } from '@/services/StreamService';
 
 export class NoteService {
   private cache: CacheService;
   private db;
+  private markdownRenderer: MarkdownRenderer;
+  private streamService: StreamService;
 
   constructor(d1: D1Database) {
     this.cache = new CacheService('notes');
     this.db = getDb(d1);
+    this.markdownRenderer = MarkdownRenderer.getInstance();
+    this.streamService = StreamService.getInstance();
   }
 
   /**
@@ -202,9 +208,16 @@ export class NoteService {
   /**
    * Create a new note
    */
-  async create(note: Omit<NewNote, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note> {
+  async create(note: Omit<NewNote, 'id' | 'createdAt' | 'updatedAt' | 'renderedContent'>): Promise<Note> {
+    // Ensure markdown renderer is initialized
+    await this.markdownRenderer.initialize();
+    
+    // Render the markdown content
+    const renderedContent = this.markdownRenderer.render(note.content);
+    
     const newNote: NewNote = {
       ...note,
+      renderedContent,
       id: crypto.randomUUID(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -216,6 +229,15 @@ export class NoteService {
       .returning();
 
     await this.invalidateCache();
+    
+    // Send a notification about the new note
+    this.streamService.sendNoteChange(
+      note.userId, 
+      'create', 
+      createdNote.id, 
+      { title: createdNote.title }
+    );
+    
     return createdNote;
   }
 
@@ -223,10 +245,19 @@ export class NoteService {
    * Update an existing note
    */
   async update(id: string, data: Partial<Omit<NewNote, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Note | undefined> {
-    const updateData = {
+    let updateData: Record<string, any> = {
       ...data,
       updatedAt: new Date(),
     };
+
+    // If content is being updated, re-render the markdown
+    if (data.content !== undefined) {
+      // Ensure markdown renderer is initialized
+      await this.markdownRenderer.initialize();
+      
+      // Render the markdown content
+      updateData.renderedContent = this.markdownRenderer.render(data.content);
+    }
 
     const [updatedNote] = await this.db
       .update(notes)
@@ -235,6 +266,17 @@ export class NoteService {
       .returning();
 
     await this.invalidateCache();
+    
+    if (updatedNote) {
+      // Send a notification about the updated note
+      this.streamService.sendNoteChange(
+        updatedNote.userId, 
+        'update', 
+        updatedNote.id, 
+        { title: updatedNote.title }
+      );
+    }
+    
     return updatedNote;
   }
 
@@ -242,12 +284,29 @@ export class NoteService {
    * Delete a note by id
    */
   async delete(id: string): Promise<boolean> {
+    // First get the note to know the userId
+    const noteToDelete = await this.getById(id);
+    if (!noteToDelete) {
+      return false;
+    }
+    
     const result = await this.db
       .delete(notes)
       .where(eq(notes.id, id))
       .returning();
 
     await this.invalidateCache();
-    return result.length > 0;
+    
+    if (result.length > 0) {
+      // Send a notification about the deleted note
+      this.streamService.sendNoteChange(
+        noteToDelete.userId as string, 
+        'delete', 
+        id
+      );
+      return true;
+    }
+    
+    return false;
   }
 }

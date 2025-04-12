@@ -17,7 +17,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     // Check if the user is trying to access the note path without authentication
     const url = new URL(context.request.url);
-    if (url.pathname.startsWith('/api/note')) {
+    if (url.pathname.startsWith('/api') && !url.pathname.startsWith('/api/auth')) {
       return new Response('Unauthorized', { status: 403 });
     }
   }

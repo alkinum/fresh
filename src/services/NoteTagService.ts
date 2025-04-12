@@ -4,14 +4,17 @@ import { noteTags, tags, notes, type NewTag, type Tag } from '@/db/schema';
 import { getDb } from '@/db';
 import { CacheService } from '@/utils/cache';
 import type { GetTagsOptions, PaginatedResult } from '@/types/note';
+import { StreamService } from '@/services/StreamService';
 
 export class NoteTagService {
   private cache: CacheService;
   private db;
+  private streamService: StreamService;
 
   constructor(d1: D1Database) {
     this.cache = new CacheService('tags');
     this.db = getDb(d1);
+    this.streamService = StreamService.getInstance();
   }
 
   /**
@@ -115,6 +118,15 @@ export class NoteTagService {
       .returning();
 
     await this.invalidateCache();
+    
+    // Send a notification about the new tag
+    this.streamService.sendTagChange(
+      tag.userId, 
+      'create', 
+      createdTag.id, 
+      { name: createdTag.name }
+    );
+    
     return createdTag;
   }
 
@@ -134,6 +146,17 @@ export class NoteTagService {
       .returning();
 
     await this.invalidateCache();
+    
+    if (updatedTag) {
+      // Send a notification about the updated tag
+      this.streamService.sendTagChange(
+        updatedTag.userId, 
+        'update', 
+        updatedTag.id, 
+        { name: updatedTag.name }
+      );
+    }
+    
     return updatedTag;
   }
 
@@ -141,13 +164,30 @@ export class NoteTagService {
    * Delete a tag by id
    */
   async delete(id: string): Promise<boolean> {
+    // First get the tag to know the userId
+    const tagToDelete = await this.getById(id);
+    if (!tagToDelete) {
+      return false;
+    }
+    
     const result = await this.db
       .delete(tags)
       .where(eq(tags.id, id))
       .returning();
 
     await this.invalidateCache();
-    return result.length > 0;
+    
+    if (result.length > 0) {
+      // Send a notification about the deleted tag
+      this.streamService.sendTagChange(
+        tagToDelete.userId, 
+        'delete', 
+        id
+      );
+      return true;
+    }
+    
+    return false;
   }
 
   /**
@@ -182,6 +222,31 @@ export class NoteTagService {
         .execute();
 
       await this.invalidateCache();
+      
+      // Get tag and note information for notification
+      const tag = await this.getById(tagId);
+      const noteResult = await this.db
+        .select()
+        .from(notes)
+        .where(eq(notes.id, noteId))
+        .execute();
+      
+      const note = noteResult[0];
+      
+      if (tag && note) {
+        // Send notification about tag association
+        this.streamService.sendTagChange(
+          tag.userId, 
+          'update', 
+          tagId, 
+          { 
+            name: tag.name,
+            action: 'addToNote',
+            noteId,
+            noteTitle: note.title 
+          }
+        );
+      }
     }
   }
 
@@ -189,6 +254,16 @@ export class NoteTagService {
    * Remove a tag from a note
    */
   async removeTagFromNote(noteId: string, tagId: string): Promise<void> {
+    // Get tag and note information for notification before deleting
+    const tag = await this.getById(tagId);
+    const noteResult = await this.db
+      .select()
+      .from(notes)
+      .where(eq(notes.id, noteId))
+      .execute();
+    
+    const note = noteResult[0];
+    
     await this.db
       .delete(noteTags)
       .where(and(
@@ -198,6 +273,21 @@ export class NoteTagService {
       .execute();
 
     await this.invalidateCache();
+    
+    if (tag && note) {
+      // Send notification about tag removal
+      this.streamService.sendTagChange(
+        tag.userId, 
+        'update', 
+        tagId, 
+        { 
+          name: tag.name,
+          action: 'removeFromNote',
+          noteId,
+          noteTitle: note.title 
+        }
+      );
+    }
   }
 
   /**
@@ -257,6 +347,12 @@ export class NoteTagService {
    * Update lastNoteModifiedAt for a tag when a related note is modified
    */
   async updateLastModified(tagId: string): Promise<void> {
+    // Get the tag to know the userId
+    const tag = await this.getById(tagId);
+    if (!tag) {
+      return;
+    }
+    
     await this.db
       .update(tags)
       .set({ lastNoteModifiedAt: new Date() })
@@ -264,6 +360,14 @@ export class NoteTagService {
       .execute();
 
     await this.invalidateCache();
+    
+    // Send notification about the tag being updated
+    this.streamService.sendTagChange(
+      tag.userId, 
+      'update', 
+      tagId, 
+      { name: tag.name, lastNoteModifiedAt: new Date() }
+    );
   }
 
   /**

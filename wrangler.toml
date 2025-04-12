@@ -1,14 +1,13 @@
 # wrangler.toml
-name = "fresh"
+name = "fresh-write"
 compatibility_date = "2025-04-01"
 compatibility_flags = [ "nodejs_compat" ]
 pages_build_output_dir = "dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "fresh"
-database_id = ""
-preview_database_id = ""
+database_name = "fresh-write"
+database_id = "38eba29f-a18e-41fd-bf82-66d0f787983d"
 
 [placement]
 mode = "smart"

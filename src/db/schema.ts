@@ -73,6 +73,7 @@ export const notes = sqliteTable('notes', {
   userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   content: text('content').notNull(),
+  renderedContent: text('rendered_content').notNull(),
   date: text('date').notNull(),
   colorIndicator: text('color_indicator').notNull(),
   isFavorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),

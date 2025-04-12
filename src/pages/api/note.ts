@@ -214,7 +214,7 @@ export const PATCH: APIRoute = async ({ request, locals }: APIContext) => {
     const validatedData = updateNoteSchema.parse(data);
 
     // Update the note
-    const updatedNote = await noteService.update(validatedId, validatedData);
+    await noteService.update(validatedId, validatedData);
 
     // If content was updated, process tags
     if (validatedData.content) {

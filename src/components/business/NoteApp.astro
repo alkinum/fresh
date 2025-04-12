@@ -1,24 +1,66 @@
 ---
-// Astro components with Vue integration
+import { NoteService } from '@/services/NoteService';
+import { NoteTagService } from '@/services/NoteTagService';
+import type { PaginatedTags } from '@/types/note';
+
 import Sidebar from './sidebar/Sidebar.vue';
 import NoteList from './notes/NoteList.vue';
 import NoteEditor from './editor/NoteEditor.vue';
 
+// Check if user is logged in
+const user = Astro.locals.user;
+const isLoggedIn = !!user;
+
+console.log('user', user);
+
+// Get username from user or use default app name
+const username = user?.name || '';
+
 // Props definition
 interface Props {
-  username?: string;
   initialPage?: string;
 }
 
-// Default props
-const { username = 'User123', initialPage = 'all-notes' } = Astro.props;
+// Fetch initial notes data for logged-in users
+let initialNotes = null;
+let initialTags: PaginatedTags | null = null;
+
+if (isLoggedIn) {
+  try {
+    const noteService = new NoteService(Astro.locals.runtime.env.DB);
+    initialNotes = await noteService.list({
+      page: 1,
+      limit: 20,
+      userId: user.id,
+    });
+
+    const noteTagService = new NoteTagService(Astro.locals.runtime.env.DB);
+    const tagData = await noteTagService.list({
+      page: 1,
+      limit: 20,
+      userId: user.id,
+    });
+
+    initialTags = {
+      items: tagData.items.map((tag) => ({
+        ...tag,
+        count: 0,
+      })),
+      totalItems: tagData.totalItems,
+      totalPages: tagData.totalPages,
+      currentPage: tagData.currentPage,
+    };
+  } catch (error) {
+    console.error('Error fetching initial data:', error);
+  }
+}
 
 // Client-side script will handle the interactive parts
 ---
 
 <div class="flex flex-col md:flex-row h-screen" id="note-app">
   <!-- Sidebar -->
-  <Sidebar username={username} visible={true} client:load />
+  <Sidebar username={username} visible={true} isLoggedIn={isLoggedIn} initialTags={initialTags} client:load />
 
   <!-- Main content area -->
   <div class="flex-1 flex flex-col overflow-hidden bg-background relative">
@@ -40,7 +82,7 @@ const { username = 'User123', initialPage = 'all-notes' } = Astro.props;
 
     <NoteEditor client:only />
     <!-- Notes list component -->
-    <NoteList client:load />
+    <NoteList initialNotes={initialNotes} isLoggedIn={isLoggedIn} client:load />
   </div>
 </div>
 
@@ -48,7 +90,6 @@ const { username = 'User123', initialPage = 'all-notes' } = Astro.props;
   // Client-side JavaScript for interactivity
   document.addEventListener('DOMContentLoaded', () => {
     let isSidebarVisible = true;
-    let currentPage = 'all-notes';
 
     // Toggle sidebar function
     const toggleSidebar = () => {
@@ -70,55 +111,5 @@ const { username = 'User123', initialPage = 'all-notes' } = Astro.props;
     if (sidebarToggleBtn) {
       sidebarToggleBtn.addEventListener('click', toggleSidebar);
     }
-
-    // Interface for custom save note event
-    interface SaveNoteEvent extends CustomEvent {
-      detail: {
-        content: string;
-      };
-    }
-
-    // Handle save note
-    document.addEventListener('save-note', ((event: SaveNoteEvent) => {
-      const content = event.detail.content;
-      console.log('Saving note with content:', content);
-
-      // Show temporary save confirmation
-      const savedMessage = document.createElement('div');
-      savedMessage.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md z-50';
-      savedMessage.textContent = 'Note saved successfully!';
-      document.body.appendChild(savedMessage);
-
-      // Remove message after 3 seconds
-      setTimeout(() => {
-        document.body.removeChild(savedMessage);
-      }, 3000);
-    }) as EventListener);
-
-    // Interface for custom page switch event
-    interface SwitchPageEvent extends CustomEvent {
-      detail: {
-        pageId: string;
-      };
-    }
-
-    // Handle page switching
-    document.addEventListener('switch-page', ((event: SwitchPageEvent) => {
-      const pageId = event.detail.pageId;
-      console.log('Switching to page:', pageId);
-      currentPage = pageId;
-      // Additional page switching logic
-    }) as EventListener);
-
-    // Handle tag creation
-    document.addEventListener('create-tag', () => {
-      console.log('Creating new tag...');
-      // Tag creation logic
-    });
   });
 </script>
-
-<style>
-  /* Any component-specific styles can go here */
-</style>
-

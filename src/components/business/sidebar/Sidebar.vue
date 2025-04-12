@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useNoteStore } from '@/stores/noteStore';
+import type { PaginatedTags } from '@/types/note';
+import LoginForm from '../common/LoginForm.vue';
 import UserInfo from './UserInfo.vue';
 import TagList from './TagList.vue';
 import PageSwitcher from './PageSwitcher.vue';
@@ -21,6 +24,8 @@ interface Page {
 const props = defineProps<{
   username: string;
   visible: boolean;
+  isLoggedIn: boolean;
+  initialTags?: PaginatedTags | null;
 }>();
 
 const emit = defineEmits<{
@@ -29,19 +34,16 @@ const emit = defineEmits<{
   switchPage: [id: string];
 }>();
 
+// Initialize store
+const noteStore = useNoteStore();
+
 // Mock page data
 const pages = ref<Page[]>([
   { id: 'all-notes', name: 'All Notes', icon: 'fa-notes-medical', active: true }
 ]);
 
-// Mock tags data
-const tags = ref<Tag[]>([
-  { id: '1', name: 'General', color: 'blue', count: 23 },
-  { id: '2', name: 'Ideas', color: 'green', count: 8 },
-  { id: '3', name: 'Work', color: 'yellow', count: 14 },
-  { id: '4', name: 'Personal', color: 'red', count: 5 },
-  { id: '5', name: 'Projects', color: 'purple', count: 9 }
-]);
+// Control login form visibility
+const showLoginForm = ref(false);
 
 const handleToggleSidebar = () => {
   emit('toggleSidebar');
@@ -58,6 +60,14 @@ const handleSwitchPage = (pageId: string) => {
   });
   emit('switchPage', pageId);
 };
+
+const openLoginForm = () => {
+  showLoginForm.value = true;
+};
+
+const closeLoginForm = () => {
+  showLoginForm.value = false;
+};
 </script>
 
 <template>
@@ -67,7 +77,9 @@ const handleSwitchPage = (pageId: string) => {
   >
     <UserInfo 
       :username="username"
+      :isLoggedIn="isLoggedIn"
       @toggle-sidebar="handleToggleSidebar"
+      @open-login-form="openLoginForm"
     />
     
     <PageSwitcher
@@ -76,8 +88,12 @@ const handleSwitchPage = (pageId: string) => {
     />
     
     <TagList 
-      :tags="tags"
+      :initialTags="initialTags"
+      :isLoggedIn="isLoggedIn"
       @create-tag="handleCreateTag"
     />
+    
+    <!-- Login Form Modal -->
+    <LoginForm v-if="showLoginForm" @close-login-form="closeLoginForm" />
   </div>
 </template>

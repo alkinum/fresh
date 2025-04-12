@@ -8,8 +8,8 @@
     "preview": "astro preview",
     "astro": "astro",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply privateplot --local",
-    "db:migrate:prod": "wrangler d1 migrations apply privateplot --remote",
+    "db:migrate:local": "wrangler d1 migrations apply fresh-write --local",
+    "db:migrate:prod": "wrangler d1 migrations apply fresh-write --remote",
     "generate:worker-types": "wrangler types"
   },
   "dependencies": {
@@ -18,6 +18,7 @@
     "@paralleldrive/cuid2": "^2.2.2",
     "@shikijs/markdown-it": "^3.2.2",
     "@tailwindcss/vite": "^4.1.3",
+    "@vueuse/core": "^13.1.0",
     "astro": "^5.6.1",
     "better-auth": "^1.2.5",
     "drizzle-orm": "^0.41.0",
@@ -27,15 +28,16 @@
     "markdown-it-katex": "^2.0.3",
     "markdown-it-task-lists": "^2.1.1",
     "md-editor-v3": "^5.4.5",
+    "pinia": "^3.0.2",
     "shiki": "^3.2.2",
     "slugify": "^1.6.6",
     "tailwindcss": "^4.1.3",
     "vue": "^3.5.13"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250410.0",
+    "@cloudflare/workers-types": "^4.20250412.0",
     "@types/markdown-it": "^14.1.2",
-    "@types/node": "^22.14.0",
+    "@types/node": "^22.14.1",
     "@typescript-eslint/parser": "^8.29.1",
     "drizzle-kit": "^0.30.6",
     "eslint": "^9.24.0",
