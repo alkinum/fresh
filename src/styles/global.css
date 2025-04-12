@@ -12,6 +12,12 @@
   --color-text-secondary: #94a3b8;
   --color-yellow-400: #facc15;
   --color-white: #ffffff;
+  
+  /* Tag colors */
+  --tag-bg: rgba(29, 78, 216, 0.15);
+  --tag-text: #60a5fa;
+  --tag-border: rgba(29, 78, 216, 0.3);
+  --tag-hover-bg: rgba(29, 78, 216, 0.25);
 }
 
 @layer components {
@@ -157,4 +163,94 @@
     background: rgba(40, 40, 40, 0.7);
     backdrop-filter: blur(5px);
   }
+  
+  /* Tag styling */
+  .note-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.5rem;
+    margin: 0 0.125rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--tag-text);
+    background-color: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  
+  .note-tag:hover {
+    background-color: var(--tag-hover-bg);
+    transform: translateY(-1px);
+  }
+  
+  /* Different tag colors based on data-tag attribute hash */
+  .note-tag[data-tag^="a"],
+  .note-tag[data-tag^="e"],
+  .note-tag[data-tag^="i"] {
+    --tag-bg: rgba(239, 68, 68, 0.15);
+    --tag-text: #f87171;
+    --tag-border: rgba(239, 68, 68, 0.3);
+    --tag-hover-bg: rgba(239, 68, 68, 0.25);
+  }
+  
+  .note-tag[data-tag^="b"],
+  .note-tag[data-tag^="f"],
+  .note-tag[data-tag^="j"] {
+    --tag-bg: rgba(245, 158, 11, 0.15);
+    --tag-text: #fbbf24;
+    --tag-border: rgba(245, 158, 11, 0.3);
+    --tag-hover-bg: rgba(245, 158, 11, 0.25);
+  }
+  
+  .note-tag[data-tag^="c"],
+  .note-tag[data-tag^="g"],
+  .note-tag[data-tag^="k"] {
+    --tag-bg: rgba(34, 197, 94, 0.15);
+    --tag-text: #4ade80;
+    --tag-border: rgba(34, 197, 94, 0.3);
+    --tag-hover-bg: rgba(34, 197, 94, 0.25);
+  }
+  
+  .note-tag[data-tag^="d"],
+  .note-tag[data-tag^="h"],
+  .note-tag[data-tag^="l"] {
+    --tag-bg: rgba(168, 85, 247, 0.15);
+    --tag-text: #c084fc;
+    --tag-border: rgba(168, 85, 247, 0.3);
+    --tag-hover-bg: rgba(168, 85, 247, 0.25);
+  }
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--color-surface-dark);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-surface-light);
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-primary-dark);
+}
+
+::-webkit-scrollbar-corner {
+  background-color: var(--color-surface-dark);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-light) var(--color-surface-dark);
 }

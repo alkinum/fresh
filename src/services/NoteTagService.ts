@@ -11,10 +11,92 @@ export class NoteTagService {
   private db;
   private streamService: StreamService;
 
+  // Color generation parameters
+  private static readonly GOLDEN_RATIO_CONJUGATE = 0.618033988749895;
+  private static readonly BASE_HUE = Math.random(); // Random starting hue
+  private static readonly COLOR_CACHE = new Map<string, string>(); // Cache colors by tag name
+
   constructor(d1: D1Database) {
     this.cache = new CacheService('tags');
     this.db = getDb(d1);
     this.streamService = StreamService.getInstance();
+  }
+
+  /**
+   * Generates a pastel color using the golden ratio conjugate
+   * This ensures colors are visually distinct but still harmonious
+   * @param seed - String to use as seed for the color
+   * @returns Hex color code
+   */
+  private generateTagColor(seed: string): string {
+    // Check if we already generated a color for this seed
+    if (NoteTagService.COLOR_CACHE.has(seed)) {
+      return NoteTagService.COLOR_CACHE.get(seed)!;
+    }
+
+    // Generate a deterministic hash value from the seed string
+    let hashValue = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hashValue = ((hashValue << 5) - hashValue) + seed.charCodeAt(i);
+      hashValue = hashValue & hashValue; // Convert to 32bit integer
+    }
+    
+    // Normalize the hash to 0-1 range
+    const normalizedHash = Math.abs(hashValue) / 2147483647;
+    
+    // Use golden ratio conjugate to generate a sequence of values
+    let hue = (NoteTagService.BASE_HUE + normalizedHash * NoteTagService.GOLDEN_RATIO_CONJUGATE) % 1;
+    
+    // Generate pastel HSL color with lower saturation
+    // Adjust these values to change the pastel quality
+    const saturation = 0.4 + normalizedHash * 0.2; // 40-60% saturation
+    const lightness = 0.65 + normalizedHash * 0.1; // 65-75% lightness
+    
+    // Convert HSL to RGB
+    const rgb = this.hslToRgb(hue, saturation, lightness);
+    
+    // Convert RGB to hex
+    const hexColor = `#${rgb.map(c => {
+      const hex = Math.round(c * 255).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    }).join('')}`;
+    
+    // Cache the result
+    NoteTagService.COLOR_CACHE.set(seed, hexColor);
+    
+    return hexColor;
+  }
+
+  /**
+   * Converts HSL color to RGB
+   * @param h - Hue (0 to 1)
+   * @param s - Saturation (0 to 1)
+   * @param l - Lightness (0 to 1)
+   * @returns RGB values as array of numbers (0 to 1)
+   */
+  private hslToRgb(h: number, s: number, l: number): [number, number, number] {
+    let r, g, b;
+
+    if (s === 0) {
+      r = g = b = l; // achromatic
+    } else {
+      const hue2rgb = (p: number, q: number, t: number) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+
+    return [r, g, b];
   }
 
   /**
@@ -104,8 +186,14 @@ export class NoteTagService {
    * Create a new tag
    */
   async create(tag: Omit<NewTag, 'id' | 'createdAt' | 'updatedAt' | 'lastNoteModifiedAt'>): Promise<Tag> {
+    // Generate a color for the tag if one is not provided
+    const tagData = { ...tag };
+    if (!tagData.color || tagData.color === '') {
+      tagData.color = this.generateTagColor(tagData.name);
+    }
+
     const newTag: NewTag = {
-      ...tag,
+      ...tagData,
       id: crypto.randomUUID(),
       lastNoteModifiedAt: new Date(),
       createdAt: new Date(),
@@ -138,6 +226,14 @@ export class NoteTagService {
       ...data,
       updatedAt: new Date(),
     };
+
+    // If name changed, regenerate the color
+    if (data.name && !data.color) {
+      const tag = await this.getById(id);
+      if (tag && tag.name !== data.name) {
+        updateData.color = this.generateTagColor(data.name);
+      }
+    }
 
     const [updatedTag] = await this.db
       .update(tags)

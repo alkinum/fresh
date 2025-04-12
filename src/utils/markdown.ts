@@ -16,6 +16,9 @@ const KATEX_BLOCK_REGEX = /\$\$[\s\S]*?\$\$/;
 const FIRST_IMAGE_REGEX = /!\[.*?\]\((.*?)\)/;
 const HTML_IMAGE_REGEX = /<img.*?src=["'](.*?)["']/;
 
+// Custom tag syntax regex
+const TAG_REGEX = /%%tag:(\w+)%%/g;
+
 export class MarkdownRenderer {
   private static instance: MarkdownRenderer;
   private md: MarkdownIt;
@@ -34,6 +37,9 @@ export class MarkdownRenderer {
       .use(katex)
       .use(githubAlerts)
       .use(taskLists, { enabled: true, label: true });
+
+    // Add custom tag syntax rule
+    this.addTagSyntaxRule();
 
     // Custom heading rendering
     const originalHeadingOpen = this.md.renderer.rules.heading_open || ((tokens, idx, options, env, self) => {
@@ -66,6 +72,28 @@ export class MarkdownRenderer {
 
       return anchorLink + originalHeadingClose(tokens, idx, options, env, self);
     };
+  }
+
+  /**
+   * Adds custom tag syntax rule to markdown-it
+   */
+  private addTagSyntaxRule(): void {
+    // Add a rule that will run after inline parsing
+    this.md.core.ruler.push('handle_tags', (state) => {
+      for (let i = 0; i < state.tokens.length; i++) {
+        const token = state.tokens[i];
+        
+        // Only apply to paragraph_open and inline tokens
+        if (token.type === 'inline' && token.content) {
+          // Replace all tag syntax instances with HTML
+          token.content = token.content.replace(TAG_REGEX, (match, tagName) => {
+            return `<span class="note-tag" data-tag="${tagName}">#${tagName}</span>`;
+          });
+        }
+      }
+      
+      return true;
+    });
   }
 
   public static getInstance(): MarkdownRenderer {
@@ -135,6 +163,21 @@ export class MarkdownRenderer {
     }
 
     return null;
+  }
+
+  /**
+   * Checks if content contains tags using our custom syntax
+   */
+  public hasTags(content: string): boolean {
+    return TAG_REGEX.test(content);
+  }
+
+  /**
+   * Extract tag names from content using our custom syntax
+   */
+  public extractCustomTags(content: string): string[] {
+    const matches = [...content.matchAll(TAG_REGEX)];
+    return [...new Set(matches.map(match => match[1]))];
   }
 
   public render(content: string): string {

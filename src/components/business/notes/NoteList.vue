@@ -114,21 +114,18 @@ watch(() => noteStore.selectedTagId, (newTagId) => {
           <input v-model="noteStore.searchQuery" type="text" placeholder="Search notes..."
             class="w-full bg-surface border border-surface-light-20 text-primary py-1.5 pl-8 pr-3 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-light/50 shadow-md">
         </div>
-        <!-- View options -->
+        <!-- Sort option only -->
         <div class="flex">
           <button class="p-1.5 rounded-md hover-bg-surface text-secondary hover-text-primary text-sm" @click="noteStore.toggleSortOrder">
             <i class="fas" :class="noteStore.sortOrder === 'desc' ? 'fa-sort-amount-down' : 'fa-sort-amount-up'"></i>
-          </button>
-          <button class="p-1.5 rounded-md hover-bg-surface text-secondary hover-text-primary text-sm" @click="noteStore.toggleViewMode">
-            <i class="fas" :class="noteStore.viewMode === 'list' ? 'fa-th-list' : 'fa-th'"></i>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Notes list -->
-    <div :class="noteStore.viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3' : ''">
-      <Note v-for="note in noteStore.filteredNotes" :key="note.id" v-bind="note" @toggle-favorite="toggleFavorite" @open-note="openNote" @show-menu="showNoteMenu" />
+    <!-- Notes list (only list mode now) -->
+    <div>
+      <Note v-for="note in noteStore.currentNotes" :key="note.id" v-bind="note" @toggle-favorite="toggleFavorite" @open-note="openNote" @show-menu="showNoteMenu" />
     </div>
 
     <!-- Loading indicator -->
@@ -138,8 +135,8 @@ watch(() => noteStore.selectedTagId, (newTagId) => {
     </div>
 
     <!-- Empty state -->
-    <div v-if="noteStore.filteredNotes.length === 0 && !noteStore.isLoading" class="text-center text-secondary mt-8">
-      <div class="text-3xl mb-2">✏️</div>
+    <div v-if="noteStore.currentNotes.length === 0 && !noteStore.isLoading" class="text-center text-secondary mt-16">
+      <div class="text-4xl mb-4">✏️</div>
       <p class="text-sm">
         <template v-if="isLoggedIn">
           <template v-if="noteStore.selectedTagId">
@@ -156,7 +153,7 @@ watch(() => noteStore.selectedTagId, (newTagId) => {
     </div>
 
     <!-- End of list indicator -->
-    <div v-if="noteStore.filteredNotes.length > 0 && noteStore.currentPage >= noteStore.totalPages && !noteStore.isLoading" class="text-center py-4 text-sm text-secondary">
+    <div v-if="noteStore.currentNotes.length > 0 && noteStore.currentPage >= noteStore.totalPages && !noteStore.isLoading" class="text-center py-4 text-sm text-secondary">
       No more notes to load
     </div>
   </div>

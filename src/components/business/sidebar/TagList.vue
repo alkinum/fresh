@@ -23,6 +23,7 @@ if (props.initialTags) {
 // Computed property for selected tag
 const selectedTagId = computed(() => noteStore.selectedTagId);
 const isUserLoggedIn = computed(() => props.isLoggedIn === true);
+const hasTags = computed(() => noteStore.tags.length > 0);
 
 // Create a target element for infinite scrolling
 const tagsContainer = ref<HTMLElement | null>(null);
@@ -113,28 +114,20 @@ onUnmounted(() => {
 
 <template>
   <div class="flex flex-col h-full">
-    <!-- Tags section -->
-    <div class="p-3 border-b border-surface-light-10">
-      <div class="text-xs text-secondary uppercase tracking-wider font-medium">Tags</div>
-    </div>
+    <!-- Only show tags section if user is logged in and has tags -->
+    <template v-if="isUserLoggedIn && hasTags">
+      <!-- Tags section header -->
+      <div class="p-3 border-b border-surface-light-10">
+        <div class="text-xs text-secondary uppercase tracking-wider font-medium">Tags</div>
+      </div>
 
-    <!-- Content based on login state -->
-    <template v-if="isUserLoggedIn">
       <!-- Tag list -->
       <nav class="flex-1 overflow-y-auto" ref="tagsContainer">
         <div class="p-2">
           <!-- Tags as menu items -->
-          <div class="space-y-0.5" v-if="noteStore.tags.length > 0">
+          <div class="space-y-0.5">
             <TagListItem v-for="tag in noteStore.tags" :key="tag.id" :name="tag.name" :color="tag.color" :count="tag.count || 0" :selected="selectedTagId === tag.id"
               @select="selectTag(tag.id)" />
-          </div>
-          
-          <!-- Empty state when no tags are available -->
-          <div v-else class="py-4 text-center text-secondary text-sm">
-            <div class="mb-2">No tags yet</div>
-            <div class="text-xs">
-              Tags help you organize your notes
-            </div>
           </div>
 
           <!-- Loading indicator for infinite scrolling -->
@@ -147,7 +140,7 @@ onUnmounted(() => {
     </template>
     
     <!-- Not logged in state -->
-    <template v-else>
+    <template v-else-if="!isUserLoggedIn">
       <div class="flex-1 flex flex-col items-center justify-center p-4 text-center">
         <div class="text-sm text-secondary mb-2">
           Sign in to access your tags
