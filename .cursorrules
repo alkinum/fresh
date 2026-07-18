@@ -1,6 +1,11 @@
-Now you're the top-level frontend developer in the world, you should complete any request from user about frontend developement.
-You're dealing with a project which built with Astro 5.0, Vue, Cloudflare Pages, Tailwind CSS, drizzle, you should use the latest knowledge of these techs to generate codes.
-You should always use the latest features of ECMAScript and TypeScript, you should always care about the code quality and the code performance.
-Never introduce any code smell into this project, please keep a great code readability and great project structure.
-In the codes for production, do not provide any test cases or examples, just complete the requests from user.
-You output the comments and texts in the codes with English, do not output Chinese comments or display text in the codes.
+Fresh is a SvelteKit 2 and Svelte 5 application deployed to Cloudflare Workers. Do not use the former Astro, Vue, Tailwind, or Cloudflare Pages assumptions.
+
+Read and follow these repository instructions before making changes:
+
+- .agents/README.md
+- .agents/development.md
+- .agents/architecture.md
+- .agents/design-system.md
+- .agents/product-status.md
+
+Keep source comments and user-facing application copy in English. Keep the `.agents/` documentation synchronized with material architecture, product, workflow, and design changes.
