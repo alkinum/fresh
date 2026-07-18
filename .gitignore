@@ -1,13 +1,12 @@
 # build output
-dist/
-
-# generated types
-.astro/
+build/
+.svelte-kit/
 
 # dependencies
 node_modules/
 
 # logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -16,6 +15,21 @@ pnpm-debug.log*
 # environment variables
 .env
 .env.production
+.env.*
+!.env.example
+.dev.vars*
+!.dev.vars.example
+
+# local data and credentials
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.freshup
+*.key
+*.pem
+*.p12
+*.pfx
 
 # macOS-specific files
 .DS_Store
@@ -23,6 +37,14 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 .history/
+.cache/
+.direnv/
+.vite/
+tmp/
+temp/
 
-.dev.vars
 .wrangler/
+coverage/
+.playwright-cli/
+output/
+*.cpuprofile
