@@ -1,21 +1,30 @@
-import eslintPluginAstro from "eslint-plugin-astro";
-import eslintPluginPrettier from "eslint-plugin-prettier/recommend";
-import eslintPluginVue from "eslint-plugin-vue";
-import globals from "globals";
+import js from '@eslint/js';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import globals from 'globals';
+import svelte from 'eslint-plugin-svelte';
+import ts from 'typescript-eslint';
 
-export default [
-  ...eslintPluginVue.configs["flat/recommended"],
-  ...eslintPluginAstro.configs.recommended,
-  ...eslintPluginPrettier,
+export default defineConfig(
+  globalIgnores(['.svelte-kit/**', 'worker-configuration.d.ts', 'migrations/**']),
+  js.configs.recommended,
+  ts.configs.recommended,
+  svelte.configs.recommended,
   {
-    rules: {
-      // override/add rules settings here
-    },
     languageOptions: {
-      sourceType: "module",
       globals: {
         ...globals.browser,
-      },
-    },
+        ...globals.node
+      }
+    }
   },
-];
+  {
+    files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        extraFileExtensions: ['.svelte'],
+        parser: ts.parser
+      }
+    }
+  }
+);
