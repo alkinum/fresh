@@ -29,9 +29,9 @@
 <div class="login-page">
   <div class="login-backdrop" aria-hidden="true">
     <svg class="login-waves" viewBox="0 0 1600 560" preserveAspectRatio="none">
-      <path class="login-wave wave-one" d="M-180 270 C 20 160, 220 380, 420 270 S 820 160, 1020 270 S 1420 380, 1780 240 L1780 620 L-180 620 Z" />
-      <path class="login-wave wave-two" d="M-180 350 C 60 220, 260 470, 500 340 S 940 220, 1180 350 S 1500 440, 1780 320 L1780 620 L-180 620 Z" />
-      <path class="login-wave wave-three" d="M-180 430 C 80 320, 310 520, 570 420 S 1040 310, 1290 430 S 1530 500, 1780 390 L1780 620 L-180 620 Z" />
+      <path class="login-wave wave-one" d="M-240 250 C 40 55, 340 470, 650 255 S 1120 45, 1450 300 S 1740 435, 1840 260 L1840 640 L-240 640 Z" />
+      <path class="login-wave wave-two" d="M-220 365 C -15 505, 190 145, 430 330 S 805 525, 1045 285 S 1435 120, 1810 365 L1810 640 L-220 640 Z" />
+      <path class="login-wave wave-three" d="M-220 455 C 125 340, 390 535, 720 438 S 1190 345, 1505 458 S 1730 510, 1840 420 L1840 640 L-220 640 Z" />
     </svg>
   </div>
 

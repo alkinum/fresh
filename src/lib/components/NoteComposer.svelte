@@ -39,6 +39,27 @@
   let activeId = $state<string | null | undefined>(undefined);
   let characterCount = $derived(content.trim().length);
 
+  function resizeTextarea(): void {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const styles = getComputedStyle(textarea);
+    const minHeight = Number.parseFloat(styles.minHeight) || 172;
+    const computedMaxHeight = Number.parseFloat(styles.maxHeight);
+    const maxHeight = Number.isFinite(computedMaxHeight) ? computedMaxHeight : 680;
+    const contentHeight = textarea.scrollHeight;
+    textarea.style.height = `${Math.min(Math.max(contentHeight, minHeight), maxHeight)}px`;
+    textarea.style.overflowY = contentHeight > maxHeight + 1 ? 'auto' : 'hidden';
+  }
+
+  $effect(() => {
+    const contentSnapshot = content;
+    if (mode !== 'write') return;
+    const frame = requestAnimationFrame(() => {
+      if (content === contentSnapshot) resizeTextarea();
+    });
+    return () => cancelAnimationFrame(frame);
+  });
+
   $effect(() => {
     const nextId = note?.id ?? null;
     if (activeId !== nextId) {
@@ -211,6 +232,7 @@
     <textarea
       bind:this={textarea}
       bind:value={content}
+      oninput={resizeTextarea}
       onkeydown={keyboardSave}
       placeholder="Write something fresh here..."
       spellcheck="true"
