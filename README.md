@@ -1,48 +1,105 @@
-# Astro Starter Kit: Basics
+<p align="center">
+  <img src="./public/favicon-256x256.png" width="112" alt="Fresh logo">
+</p>
+
+<h1 align="center">Fresh</h1>
+
+<p align="center">
+  A clear, cheerful notebook for Markdown, media, and encrypted backups.
+</p>
+
+<p align="center">
+  <img alt="SvelteKit" src="https://img.shields.io/badge/SvelteKit-FF3E00?style=flat-square&logo=svelte&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white">
+  <img alt="Cloudflare" src="https://img.shields.io/badge/Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white">
+</p>
+
+Fresh is a personal notebook built with SvelteKit and deployed as a Cloudflare Worker. It keeps note metadata in D1, file attachments in R2, and sign-in behind GitHub OAuth.
+
+## Highlights
+
+- Markdown notes with KaTeX math, syntax highlighting, GitHub alerts, emoji, links, tables, and tags
+- Interactive task lists that update the saved Markdown directly from the rendered note
+- Titles derived automatically from the first level-one heading
+- Search, favorites, tag filters, responsive navigation, and rich attachment previews
+- Images, audio, video, PDFs, documents, archives, and other files stored in R2
+- Password-encrypted `.freshup` backups with merge and replace import modes
+- A responsive Fresh interface with accessible controls and mobile-friendly layouts
+
+## Stack
+
+| Layer | Technology |
+| --- | --- |
+| Application | SvelteKit, Svelte 5, TypeScript |
+| Runtime | Cloudflare Workers with Static Assets |
+| Data | Cloudflare D1, Drizzle ORM |
+| Files | Cloudflare R2 |
+| Authentication | Better Auth, GitHub OAuth |
+| Markdown | Markdown-It, KaTeX, Highlight.js |
+| Validation | Zod, Vitest, ESLint, svelte-check |
+
+## Local development
+
+Requirements: Node.js with npm and a GitHub OAuth app for sign-in.
 
 ```sh
-npm create astro@latest -- --template basics
+npm install
+cp .env.example .env
+npm run db:migrate:local
+npm run dev
 ```
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/basics)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/basics)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/basics/devcontainer.json)
-
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-![just-the-basics](https://github.com/withastro/astro/assets/2244813/a0a5533c-a856-4198-8470-2d67b1d7c554)
-
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
+Configure the OAuth app with this local callback URL:
 
 ```text
-/
-├── public/
-│   └── favicon.svg
-├── src/
-│   ├── layouts/
-│   │   └── Layout.astro
-│   └── pages/
-│       └── index.astro
-└── package.json
+http://localhost:5173/api/auth/callback/github
 ```
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+Then fill the local environment file:
 
-## 🧞 Commands
+| Variable | Purpose |
+| --- | --- |
+| `GITHUB_CLIENT_ID` | GitHub OAuth application ID |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth application secret |
+| `BETTER_AUTH_SECRET` | Long random secret used to sign authentication state |
+| `BETTER_AUTH_URL` | Application origin, normally `http://localhost:5173` |
 
-All commands are run from the root of the project, from a terminal:
+Vite reads `.env`. Wrangler reads `.dev.vars`, so copy the same local values there when running Wrangler commands directly. Both files are ignored by Git. Keep real credentials out of source control and commit only the provided example files.
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+## Useful commands
 
-## 👀 Want to learn more?
+```sh
+npm run check             # Svelte and TypeScript diagnostics
+npm run lint              # ESLint
+npm test                  # Unit tests
+npm run build             # Production build
+npm run db:migrate:local  # Apply migrations to local D1
+npm run db:migrate:prod   # Apply migrations to remote D1
+npm run deploy            # Build and deploy with Wrangler
+```
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+## Cloudflare deployment
+
+The Worker expects these bindings from `wrangler.jsonc`:
+
+- `DB`: a D1 database named `fresh`
+- `ATTACHMENTS`: an R2 bucket named `fresh-attachments`
+- `ASSETS`: the generated SvelteKit static assets
+
+Create the D1 database and R2 bucket in your Cloudflare account, update the D1 database ID, apply the migrations, and store production credentials with Wrangler secrets before the first deployment.
+
+```sh
+npx wrangler secret put GITHUB_CLIENT_ID
+npx wrangler secret put GITHUB_CLIENT_SECRET
+npx wrangler secret put BETTER_AUTH_SECRET
+npm run db:migrate:prod
+npm run deploy
+```
+
+Set `BETTER_AUTH_URL` to the production origin in the Worker environment and add the matching production callback URL to the GitHub OAuth app.
+
+## Encrypted backups
+
+Fresh exports notes, tags, and attachments into a `.freshup` archive. Encryption happens in the browser with AES-256-GCM using a PBKDF2-SHA-256 key derived from the backup password. The password is never stored in the archive or sent to the server during export.
+
+The current `FRESHUP1` format remains import-compatible with backups created before the project was renamed to Fresh.
