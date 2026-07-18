@@ -12,6 +12,7 @@
   <img alt="SvelteKit" src="https://img.shields.io/badge/SvelteKit-FF3E00?style=flat-square&logo=svelte&logoColor=white">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white">
   <img alt="Cloudflare" src="https://img.shields.io/badge/Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white">
+  <img alt="Apache License 2.0" src="https://img.shields.io/badge/License-Apache--2.0-4f8cff?style=flat-square">
 </p>
 
 Fresh is a personal notebook built with SvelteKit and deployed as a Cloudflare Worker. It keeps note metadata in D1, file attachments in R2, and sign-in behind GitHub OAuth.
@@ -103,3 +104,7 @@ Set `BETTER_AUTH_URL` to the production origin in the Worker environment and add
 Fresh exports notes, tags, and attachments into a `.freshup` archive. Encryption happens in the browser with AES-256-GCM using a PBKDF2-SHA-256 key derived from the backup password. The password is never stored in the archive or sent to the server during export.
 
 The current `FRESHUP1` format remains import-compatible with backups created before the project was renamed to Fresh.
+
+## License
+
+Fresh is available under the [Apache License 2.0](./LICENSE).
