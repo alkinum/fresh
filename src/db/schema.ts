@@ -3,7 +3,8 @@ import {
   sqliteTable,
   text,
   integer,
-  primaryKey
+  primaryKey,
+  index
 } from 'drizzle-orm/sqlite-core';
 
 // === better-auth ===
@@ -73,7 +74,7 @@ export const notes = sqliteTable('notes', {
   userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   content: text('content').notNull(),
-  renderedContent: text('rendered_content').notNull(),
+  renderedContent: text('rendered_content').notNull().default(''),
   date: text('date').notNull(),
   colorIndicator: text('color_indicator').notNull(),
   isFavorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),
@@ -103,9 +104,27 @@ export const noteTags = sqliteTable('note_tags', {
   pk: primaryKey({ columns: [table.noteId, table.tagId] }),
 }));
 
+export const attachments = sqliteTable('attachments', {
+  id: text('id').primaryKey(),
+  noteId: text('note_id').notNull().references(() => notes.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  r2Key: text('r2_key').notNull().unique(),
+  fileName: text('file_name').notNull(),
+  mediaType: text('media_type').notNull(),
+  kind: text('kind', {
+    enum: ['image', 'audio', 'video', 'pdf', 'text', 'document', 'archive', 'other']
+  }).notNull(),
+  size: integer('size').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => [
+  index('attachments_note_id_idx').on(table.noteId),
+  index('attachments_user_id_idx').on(table.userId)
+]);
+
 // Relations configuration
 export const noteRelations = relations(notes, ({ many, one }) => ({
   noteTags: many(noteTags),
+  attachments: many(attachments),
   user: one(user, {
     fields: [notes.userId],
     references: [user.id],
@@ -131,12 +150,24 @@ export const noteTagRelations = relations(noteTags, ({ one }) => ({
   }),
 }));
 
+export const attachmentRelations = relations(attachments, ({ one }) => ({
+  note: one(notes, {
+    fields: [attachments.noteId],
+    references: [notes.id],
+  }),
+  user: one(user, {
+    fields: [attachments.userId],
+    references: [user.id],
+  }),
+}));
+
 // User relations
 export const userRelations = relations(user, ({ many }) => ({
   notes: many(notes),
   tags: many(tags),
   sessions: many(session),
   accounts: many(account),
+  attachments: many(attachments),
 }));
 
 // Types
@@ -150,3 +181,5 @@ export type Session = typeof session.$inferSelect;
 export type NewSession = typeof session.$inferInsert;
 export type Account = typeof account.$inferSelect;
 export type NewAccount = typeof account.$inferInsert;
+export type Attachment = typeof attachments.$inferSelect;
+export type NewAttachment = typeof attachments.$inferInsert;
