@@ -2,6 +2,7 @@
   import {
     ArchiveRestore,
     FileText,
+    Fingerprint,
     LogOut,
     Star,
     X
@@ -22,6 +23,7 @@
     open = false,
     onView,
     onTag,
+    onPasskeys,
     onBackup,
     onLogout,
     onClose
@@ -33,6 +35,7 @@
     open?: boolean;
     onView: (view: 'all' | 'favorites') => void;
     onTag: (id: string | null) => void;
+    onPasskeys: () => void;
     onBackup: () => void;
     onLogout: () => void;
     onClose: () => void;
@@ -88,6 +91,16 @@
   </div>
 
   <div class="sidebar-footer">
+    <div class="sidebar-account-tools">
+      <button onclick={onPasskeys}>
+        <Fingerprint size={16} />
+        <span>Passkeys</span>
+      </button>
+      <button onclick={onBackup}>
+        <ArchiveRestore size={16} />
+        <span>Backups</span>
+      </button>
+    </div>
     <div class="user-row">
       {#if user.image}
         <img src={user.image} alt="" />
@@ -98,9 +111,6 @@
         <strong>{user.name}</strong>
         <span>{user.email}</span>
       </div>
-      <button class="icon-button" aria-label="Backups" title="Backups" onclick={onBackup}>
-        <ArchiveRestore size={17} />
-      </button>
       <button class="icon-button" aria-label="Sign out" title="Sign out" onclick={onLogout}>
         <LogOut size={17} />
       </button>

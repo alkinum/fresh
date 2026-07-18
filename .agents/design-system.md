@@ -13,6 +13,12 @@ The current design direction is:
 - Dense but breathable notebook composition with obvious writing and scanning hierarchy.
 - Small physical motion that confirms interaction; stronger ambient motion is reserved for login.
 
+## Landing page
+
+The public `/` route is an immersive product view, not a generic SaaS template. Its first viewport uses the real Fresh workspace language as the scene: rounded navigation shell, editor toolbar, note cards, tags, tasks, and the exported product mark. The H1 is the product name `Fresh`; supporting copy carries the value proposition.
+
+Keep the hero unframed at page level, with the product canvas acting as a genuine tool surface behind the copy. The next feature band must remain visible at the bottom of every desktop and mobile first viewport. Later sections are full-width bands with unframed copy and only genuine product tools framed as panels. Do not introduce testimonial cards, pricing cards, decorative gradient orbs, abstract SVG hero art, or stock imagery.
+
 ## Source of truth
 
 Global design tokens and current component styles live in `src/styles/global.css`. Reuse semantic variables rather than adding hardcoded light-only colors.

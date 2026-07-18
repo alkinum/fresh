@@ -20,7 +20,7 @@
 | Runtime | Cloudflare Workers with `nodejs_compat` |
 | Database | Cloudflare D1 through Drizzle ORM |
 | Object storage | Cloudflare R2 |
-| Authentication | Better Auth with GitHub OAuth |
+| Authentication | Better Auth with GitHub OAuth and the passkey plugin |
 | Validation | Zod |
 | Unit tests | Vitest |
 | Static checks | ESLint and `svelte-check` |
@@ -102,7 +102,9 @@ Keep route handlers thin. Parse requests, verify authentication and bindings, de
 
 ## API and data rules
 
-- Authentication is established in `src/hooks.server.ts`; protected pages redirect to `/login` and protected APIs return `401`.
+- Authentication is established in `src/hooks.server.ts`; `/app` redirects anonymous users to `/login` and protected APIs return `401`.
+- Keep passkey registration session-bound. GitHub OAuth establishes the account before a user can register a passkey.
+- Passkey changes must preserve WebAuthn relying-party derivation from the canonical `BETTER_AUTH_URL` and require HTTPS outside localhost.
 - Never trust an ID by itself. Query owned records with both record ID and `locals.user.id`.
 - Never expose raw R2 keys to clients. DTOs expose authenticated application URLs.
 - Parse JSON bodies and imported manifests with Zod. Maintain current maximum lengths unless a product decision explicitly changes them.

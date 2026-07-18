@@ -1,5 +1,6 @@
 import { getRequestEvent } from '$app/server';
 import { env } from '$env/dynamic/private';
+import { passkey } from '@better-auth/passkey';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
@@ -29,7 +30,10 @@ export const createAuth = (d1: D1Database) => betterAuth({
       clientSecret: env.GITHUB_CLIENT_SECRET ?? ''
     }
   },
-  plugins: [sveltekitCookies(getRequestEvent)]
+  plugins: [
+    passkey({ rpName: 'Fresh' }),
+    sveltekitCookies(getRequestEvent)
+  ]
 });
 
 export const isGitHubAuthConfigured = () => Boolean(

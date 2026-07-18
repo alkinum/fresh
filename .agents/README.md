@@ -17,7 +17,7 @@ This directory is the maintained context for anyone developing Fresh. Read it be
 - License: Apache-2.0.
 - Primary runtime: Cloudflare Workers.
 - Application stack: SvelteKit 2, Svelte 5, TypeScript, D1, R2, Drizzle ORM, Better Auth.
-- Authentication: GitHub OAuth only.
+- Authentication: GitHub OAuth for account bootstrap, plus registered WebAuthn passkeys.
 - Product tone: clear, cheerful, fresh, lively, cute, tidy, and work-focused.
 
 Do not reintroduce the former `freshWrite` product name in visible copy, package metadata, assets, or new identifiers. The `FRESHUP1` backup magic is intentionally retained for backup compatibility.

@@ -9,7 +9,7 @@ Fresh is a server-rendered SvelteKit application built into a Cloudflare Worker.
 | Browser UI | Svelte 5 components | Editing, filtering loaded notes, previews, attachment selection, backup encryption |
 | SvelteKit server | Page loads and API handlers | Authentication gates, validation, orchestration, HTTP responses |
 | Domain services | `src/lib/server/` | Notes, tags, Markdown, attachments, backups, upload enforcement |
-| Authentication | Better Auth | GitHub OAuth, sessions, account linking, SvelteKit cookies |
+| Authentication | Better Auth | GitHub OAuth, WebAuthn passkeys, sessions, account linking, SvelteKit cookies |
 | Relational data | Cloudflare D1 and Drizzle | Users, sessions, notes, tags, relations, attachment metadata |
 | Object data | Cloudflare R2 | User attachment bytes |
 | Static assets | Worker static asset binding | Logo, icons, manifest, generated client assets |
@@ -28,7 +28,7 @@ Cloudflare bindings are `DB`, `ATTACHMENTS`, and `ASSETS`. The Worker uses smart
 
 ## Data model
 
-Better Auth owns `user`, `session`, `account`, `verification`, and `passkey` tables. Email/password sign-in is disabled; GitHub is the trusted social provider.
+Better Auth owns `user`, `session`, `account`, `verification`, and `passkey` tables. Email/password sign-in is disabled; GitHub is the trusted social provider used to establish an account, and registered passkeys can create later sessions without GitHub.
 
 Fresh owns:
 
@@ -39,14 +39,15 @@ Fresh owns:
 | `note_tags` | Composite `noteId`, `tagId` | Rebuilt when note content changes |
 | `attachments` | `id`, `noteId`, `userId`, private `r2Key`, file metadata and kind | Indexed by note and user; bytes live in R2 |
 
-The schema is in `src/db/schema.ts`. Two migrations currently establish authentication and attachment storage. Schema changes must be represented by new migrations.
+The schema is in `src/db/schema.ts`. Three migrations currently establish authentication, attachment storage, and current Passkey metadata/index compatibility. Schema changes must be represented by new migrations.
 
 ## Pages and APIs
 
 | Route | Behavior |
 | --- | --- |
-| `/login` | GitHub OAuth entry, disabled configuration state, animated Fresh brand scene |
-| `/` | Authenticated notebook workspace; first page loads 30 notes and all tag summaries |
+| `/` | Public Fresh landing page with authenticated or sign-in call to action |
+| `/login` | Passkey and GitHub OAuth entry, disabled configuration states, animated Fresh brand scene |
+| `/app` | Authenticated notebook workspace; first page loads 30 notes and all tag summaries |
 | `GET /api/notes` | Paginated notes filtered by favorite or tag |
 | `POST /api/notes` | Create a note from Markdown content |
 | `GET /api/notes/:id` | Return one owned note |
@@ -122,3 +123,5 @@ Import reverses the flow:
 `svelte.config.js` maps public assets from `public/` and uses the Cloudflare adapter. `wrangler.jsonc` points the Worker entry to `.svelte-kit/cloudflare/_worker.js`, a D1 database named `fresh`, and an R2 bucket named `fresh-attachments`.
 
 Production setup requires OAuth credentials, a Better Auth secret, the canonical production `BETTER_AUTH_URL`, the correct GitHub callback, migrated D1 schema, and the R2 bucket. Secrets are configured outside Git.
+
+The Better Auth Passkey plugin derives its WebAuthn relying-party host from `BETTER_AUTH_URL`, uses `Fresh` as the relying-party name, and stores credential metadata in the existing `passkey` table. Registration requires an authenticated session. The app exposes registration, listing, and deletion from the sidebar Passkeys dialog; the login page uses discoverable passkey authentication.

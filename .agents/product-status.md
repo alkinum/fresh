@@ -6,7 +6,7 @@ This is a status snapshot, not a roadmap promise. Update it when capabilities or
 
 ## Overall state
 
-Fresh is a functioning authenticated notebook with a complete local development path and Cloudflare deployment configuration. The current main workflow covers sign-in, note creation and editing, Markdown rendering, task updates, filtering, attachments, and encrypted backup import/export.
+Fresh is a functioning notebook with a public landing page, a complete local development path, and Cloudflare deployment configuration. The current main workflow covers Passkey or GitHub sign-in, note creation and editing, Markdown rendering, task updates, filtering, attachments, and encrypted backup import/export.
 
 The repository is prepared for open source: it has an Apache-2.0 license, public setup documentation, credential examples, ignored local secrets, ignored browser/test output, and exported logo assets.
 
@@ -14,7 +14,9 @@ The repository is prepared for open source: it has an Apache-2.0 license, public
 
 | Area | Status | Current behavior |
 | --- | --- | --- |
+| Public landing page | Implemented | Product-led Fresh overview at `/` with authenticated-aware entry actions |
 | GitHub authentication | Implemented | Better Auth social sign-in, session cookies, login redirects, sign-out, unconfigured state |
+| Passkey authentication | Implemented | Better Auth WebAuthn sign-in plus session-bound registration, listing, and deletion |
 | Notes | Implemented | Create, edit, delete, favorite, color accent, update timestamps, responsive card grid |
 | Automatic titles | Implemented | First valid H1 is title; title H1 is hidden from rendered body; safe fallback title |
 | Markdown | Implemented | Breaks, links, emoji, GitHub alerts, tables, KaTeX, syntax highlighting, styled rendered content |
@@ -43,7 +45,7 @@ The repository is prepared for open source: it has an Apache-2.0 license, public
 - R2 binding is `ATTACHMENTS`, bucket name is `fresh-attachments`.
 - Static assets use the `ASSETS` binding.
 - Smart placement, Worker logs, and sampled traces are enabled in configuration.
-- The current schema includes Better Auth tables plus notes, tags, note/tag relations, and attachments.
+- The current schema includes Better Auth and Passkey tables plus notes, tags, note/tag relations, and attachments.
 - The current backup schema version is 1 and the compatibility header remains `FRESHUP1`.
 
 Configuration in the repository does not prove that every external Cloudflare or GitHub resource exists in another environment. Deployment and OAuth verification still require valid environment-specific credentials and callback URLs.
@@ -63,12 +65,12 @@ Unit coverage currently exercises:
 - Attachment classification and filename sanitization.
 - Encrypted backup round-trip and wrong-password rejection.
 
-Manual browser verification has covered desktop light, desktop dark, and `390x844` mobile layouts, including login waves, logo depth, sidebar selection, editor auto-growth, and overflow behavior.
+Manual browser verification has covered desktop light, desktop dark, and `390x844` mobile layouts, including the public landing page, login waves, logo depth, sidebar selection, editor auto-growth, Passkey management, and overflow behavior. A virtual WebAuthn authenticator has also verified registration, sign-out, discoverable Passkey sign-in, `/app` return, and test-credential cleanup.
 
 ## Known scope and limitations
 
 - Theme follows the operating system. There is no in-app theme selector.
-- Authentication is GitHub-only. Email/password and other OAuth providers are disabled or not configured.
+- GitHub remains the account-bootstrap provider. Email/password and other OAuth providers are disabled or not configured.
 - Search is local to loaded notes; it is not a server-wide full-text search.
 - Tags are generated from note content; there is no standalone tag editor or rename/delete workflow.
 - Notes are private to an account. Sharing, collaboration, public links, and multi-user note editing are not implemented.
@@ -92,6 +94,7 @@ Do not describe any item in this section as implemented until code, tests, and t
 - Added encrypted `.freshup` backup merge and replace flows.
 - Renamed and rebranded the product from freshWrite to Fresh with a complete icon set.
 - Added responsive light/dark design tokens, restrained Liquid Glass, layered logo treatment, and distinct login sine motion.
+- Added a product-led public landing page, moved the private notebook to `/app`, and added Passkey login and device management.
 - Added Apache-2.0 licensing and refreshed the public README.
 
 ## Status update checklist

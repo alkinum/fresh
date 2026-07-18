@@ -1,23 +1,48 @@
 <script lang="ts">
-  import { AlertCircle, GitFork, LoaderCircle } from '@lucide/svelte';
+  import { resolve } from '$app/paths';
+  import { AlertCircle, Fingerprint, GitFork, LoaderCircle } from '@lucide/svelte';
   import { authClient } from '$lib/auth-client';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
-  let loading = $state(false);
+  let authenticating = $state<'github' | 'passkey' | null>(null);
   let errorMessage = $state('');
+  let passkeySupported = $derived(
+    typeof window !== 'undefined' && window.isSecureContext && 'PublicKeyCredential' in window
+  );
 
   async function signIn(): Promise<void> {
-    if (!data.githubAuthConfigured || loading) return;
-    loading = true;
+    if (!data.githubAuthConfigured || authenticating) return;
+    authenticating = 'github';
     errorMessage = '';
 
     try {
-      const result = await authClient.signIn.social({ provider: 'github', callbackURL: '/' });
+      const result = await authClient.signIn.social({ provider: 'github', callbackURL: '/app' });
       if (result.error) throw new Error(result.error.message ?? 'GitHub sign-in failed');
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'GitHub sign-in failed';
-      loading = false;
+      authenticating = null;
+    }
+  }
+
+  async function signInWithPasskey(): Promise<void> {
+    if (!passkeySupported || authenticating) return;
+    authenticating = 'passkey';
+    errorMessage = '';
+
+    try {
+      const result = await authClient.signIn.passkey();
+      if (result.error) {
+        errorMessage = 'code' in result.error && result.error.code === 'AUTH_CANCELLED'
+          ? 'Passkey sign-in was cancelled.'
+          : result.error.message ?? 'Passkey sign-in failed';
+        return;
+      }
+      location.assign('/app');
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : 'Passkey sign-in failed';
+    } finally {
+      authenticating = null;
     }
   }
 </script>
@@ -37,34 +62,54 @@
 
   <main class="login-stage">
     <section class="login-panel" aria-labelledby="login-title">
-      <div class="login-brand" aria-label="Fresh">
+      <a class="login-brand" href={resolve('/')} aria-label="Fresh home">
         <span class="brand-mark" aria-hidden="true"><img src="/favicon-256x256.png" alt="" /></span>
         <strong>Fresh</strong>
-      </div>
+      </a>
 
       <div class="login-copy">
         <h1 id="login-title">Welcome back</h1>
         <p>Sign in to continue to your notes.</p>
       </div>
 
-      <button
-        class="login-github-button"
-        disabled={!data.githubAuthConfigured || loading}
-        aria-busy={loading}
-        onclick={() => void signIn()}
-      >
-        {#if loading}
-          <LoaderCircle class="spin" size={19} />
-        {:else}
-          <GitFork size={19} />
-        {/if}
-        <span>{loading ? 'Connecting...' : 'Continue with GitHub'}</span>
-      </button>
+      <div class="login-actions">
+        <button
+          class="login-passkey-button"
+          disabled={!passkeySupported || Boolean(authenticating)}
+          aria-busy={authenticating === 'passkey'}
+          onclick={() => void signInWithPasskey()}
+        >
+          {#if authenticating === 'passkey'}
+            <LoaderCircle class="spin" size={19} />
+          {:else}
+            <Fingerprint size={19} />
+          {/if}
+          <span>{authenticating === 'passkey' ? 'Checking...' : 'Continue with a passkey'}</span>
+        </button>
 
-      {#if !data.githubAuthConfigured || errorMessage}
+        <div class="login-divider"><span>or</span></div>
+
+        <button
+          class="login-github-button"
+          disabled={!data.githubAuthConfigured || Boolean(authenticating)}
+          aria-busy={authenticating === 'github'}
+          onclick={() => void signIn()}
+        >
+          {#if authenticating === 'github'}
+          <LoaderCircle class="spin" size={19} />
+          {:else}
+            <GitFork size={19} />
+          {/if}
+          <span>{authenticating === 'github' ? 'Connecting...' : 'Continue with GitHub'}</span>
+        </button>
+      </div>
+
+      {#if !passkeySupported || !data.githubAuthConfigured || errorMessage}
         <div class="login-message" role="status">
           <AlertCircle size={16} />
-          <span>{errorMessage || 'GitHub sign-in is not configured.'}</span>
+          <span>{errorMessage || (!passkeySupported
+            ? 'Passkeys require a supported browser and a secure connection.'
+            : 'GitHub sign-in is not configured on this environment.')}</span>
         </div>
       {/if}
     </section>

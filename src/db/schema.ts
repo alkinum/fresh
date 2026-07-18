@@ -64,8 +64,12 @@ export const passkey = sqliteTable("passkey", {
   deviceType: text('device_type').notNull(),
   backedUp: integer('backed_up', { mode: 'boolean' }).notNull(),
   transports: text('transports'),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-});
+  createdAt: integer('created_at', { mode: 'timestamp' }),
+  aaguid: text('aaguid')
+}, (table) => [
+  index('passkey_user_id_idx').on(table.userId),
+  index('passkey_credential_id_idx').on(table.credentialID)
+]);
 
 
 // Notes table

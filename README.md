@@ -15,7 +15,7 @@
   <img alt="Apache License 2.0" src="https://img.shields.io/badge/License-Apache--2.0-4f8cff?style=flat-square">
 </p>
 
-Fresh is a personal notebook built with SvelteKit and deployed as a Cloudflare Worker. It keeps note metadata in D1, file attachments in R2, and sign-in behind GitHub OAuth.
+Fresh is a personal notebook built with SvelteKit and deployed as a Cloudflare Worker. It keeps note metadata in D1, file attachments in R2, and account access behind GitHub OAuth or a registered passkey.
 
 ## Highlights
 
@@ -24,8 +24,9 @@ Fresh is a personal notebook built with SvelteKit and deployed as a Cloudflare W
 - Titles derived automatically from the first level-one heading
 - Search, favorites, tag filters, responsive navigation, and rich attachment previews
 - Images, audio, video, PDFs, documents, archives, and other files stored in R2
+- Passkey sign-in with in-app device registration and management
 - Password-encrypted `.freshup` backups with merge and replace import modes
-- A responsive Fresh interface with accessible controls and mobile-friendly layouts
+- A public Fresh landing page and responsive notebook at `/app`
 
 ## Stack
 
@@ -35,7 +36,7 @@ Fresh is a personal notebook built with SvelteKit and deployed as a Cloudflare W
 | Runtime | Cloudflare Workers with Static Assets |
 | Data | Cloudflare D1, Drizzle ORM |
 | Files | Cloudflare R2 |
-| Authentication | Better Auth, GitHub OAuth |
+| Authentication | Better Auth, GitHub OAuth, WebAuthn passkeys |
 | Markdown | Markdown-It, KaTeX, Highlight.js |
 | Validation | Zod, Vitest, ESLint, svelte-check |
 

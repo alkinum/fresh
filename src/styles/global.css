@@ -333,6 +333,8 @@ summary:focus-visible {
   justify-content: center;
   gap: 10px;
   margin-bottom: 28px;
+  color: var(--text);
+  text-decoration: none;
 }
 
 .login-brand strong {
@@ -366,6 +368,12 @@ summary:focus-visible {
   line-height: 1.6;
 }
 
+.login-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.login-passkey-button,
 .login-github-button {
   width: 100%;
   min-height: 50px;
@@ -386,16 +394,53 @@ summary:focus-visible {
   transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
-.login-github-button:hover:not(:disabled) {
+.login-passkey-button {
+  color: var(--primary-on);
+  background: var(--primary);
+  box-shadow: 0 12px 28px rgba(54, 111, 211, 0.28);
+}
+
+.login-passkey-button:hover:not(:disabled) {
   background: var(--primary-hover);
   box-shadow: 0 16px 34px rgba(54, 111, 211, 0.34);
 }
 
+.login-github-button {
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  background: var(--glass-action);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-sm);
+}
+
+.login-github-button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow);
+}
+
+.login-passkey-button:disabled,
 .login-github-button:disabled {
   color: var(--disabled-text);
   background: var(--disabled-bg);
   box-shadow: none;
   cursor: not-allowed;
+}
+
+.login-divider {
+  height: 16px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--faint);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--border-soft);
 }
 
 .login-message {
@@ -615,6 +660,37 @@ summary:focus-visible {
 
 .sidebar-footer {
   padding: 12px;
+}
+
+.sidebar-account-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.sidebar-account-tools button {
+  min-width: 0;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  transition: color 140ms ease, border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.sidebar-account-tools button:hover {
+  border-color: var(--glass-border);
+  color: var(--text);
+  background: var(--glass-control);
 }
 
 .user-row {
@@ -1895,6 +1971,167 @@ summary:focus-visible {
   color: var(--danger);
 }
 
+.passkey-dialog {
+  width: min(520px, 100%);
+}
+
+.passkey-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin: 16px 16px 0;
+  padding: 13px;
+  border-radius: var(--radius-panel);
+  color: var(--text-body);
+  background: var(--primary-soft);
+}
+
+.passkey-intro-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-control);
+  color: var(--primary-hover);
+  background: var(--glass-action);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+}
+
+.passkey-intro > div {
+  min-width: 0;
+}
+
+.passkey-intro strong {
+  color: var(--text-strong);
+  font-size: 12px;
+}
+
+.passkey-intro p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.passkey-add {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+}
+
+.passkey-add > label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.passkey-add > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.passkey-add input {
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-control);
+  outline: 0;
+  color: var(--text);
+  background: var(--surface-subtle);
+  box-shadow: inset 0 1px 4px var(--glass-lowlight);
+  font-size: 12px;
+}
+
+.passkey-add input:focus {
+  box-shadow: 0 0 0 3px var(--primary-ring), inset 0 1px 4px var(--glass-lowlight);
+}
+
+.passkey-list {
+  display: grid;
+  gap: 7px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 0 16px 16px;
+}
+
+.passkey-row {
+  min-width: 0;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+}
+
+.passkey-row-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-control);
+  color: var(--primary-hover);
+  background: var(--primary-soft);
+}
+
+.passkey-row > div {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 3px;
+}
+
+.passkey-row strong,
+.passkey-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.passkey-row strong {
+  color: var(--text-strong);
+  font-size: 11px;
+}
+
+.passkey-row span {
+  color: var(--faint);
+  font-size: 9px;
+}
+
+.passkey-row .danger {
+  color: var(--danger);
+}
+
+.passkey-row .icon-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.passkey-loading,
+.passkey-empty,
+.passkey-unavailable {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 16px 20px;
+  color: var(--faint);
+  font-size: 11px;
+  text-align: center;
+}
+
+.passkey-unavailable {
+  color: var(--danger-text);
+}
+
 .toast {
   position: fixed;
   right: 18px;
@@ -2099,6 +2336,23 @@ summary:focus-visible {
     justify-content: flex-end;
     padding-top: 5px;
     border-top: 1px solid var(--primary-soft);
+  }
+
+  .passkey-add > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .passkey-add .primary-button {
+    width: 100%;
+  }
+
+  .passkey-intro {
+    margin-inline: 12px;
+  }
+
+  .passkey-add,
+  .passkey-list {
+    padding-inline: 12px;
   }
 }
 
