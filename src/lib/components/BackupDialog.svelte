@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ArchiveRestore, Download, LoaderCircle, Upload, X } from '@lucide/svelte';
   import { decryptBackup, encryptBackup } from '$lib/backup';
+  import { modalFocus } from '$lib/modal-focus';
   import type { BackupManifest } from '$lib/types';
 
   let {
@@ -22,6 +23,7 @@
   let importMode = $state<'merge' | 'replace'>('replace');
   let busy = $state(false);
   let progress = $state('');
+  let pendingFinalizeUrl = $state<string | null>(null);
 
   function dismiss(): void {
     if (busy) return;
@@ -38,6 +40,7 @@
   }
 
   async function exportBackup(): Promise<void> {
+    if (busy) return;
     if (password.length < 8) return onError('Use a password with at least 8 characters');
     if (password !== confirmation) return onError('Passwords do not match');
     busy = true;
@@ -86,11 +89,26 @@
   }
 
   async function importBackup(): Promise<void> {
-    if (!backupFile) return onError('Choose a Fresh backup');
-    if (!password) return onError('Enter the backup password');
+    if (busy) return;
     busy = true;
+    let preparedImport: { finalizeUrl: string } | null = null;
 
     try {
+      if (pendingFinalizeUrl) {
+        progress = 'Confirming previous restore';
+        const retry = await fetch(pendingFinalizeUrl, { method: 'POST' });
+        if (!retry.ok) {
+          if (retry.status < 500) pendingFinalizeUrl = null;
+          throw new Error(await responseError(retry));
+        }
+        pendingFinalizeUrl = null;
+        progress = 'Backup restored';
+        await onComplete();
+        return;
+      }
+
+      if (!backupFile) throw new Error('Choose a Fresh backup');
+      if (!password) throw new Error('Enter the backup password');
       progress = 'Decrypting backup';
       const decrypted = await decryptBackup(backupFile, password);
       progress = 'Restoring notes';
@@ -101,8 +119,11 @@
       });
       if (!response.ok) throw new Error(await responseError(response));
       const result = await response.json() as {
+        importId: string;
         attachments: Array<{ sourceId: string; id: string; uploadUrl: string }>;
+        finalizeUrl: string;
       };
+      preparedImport = result;
 
       for (let index = 0; index < result.attachments.length; index += 1) {
         const attachment = result.attachments[index];
@@ -119,12 +140,27 @@
         if (!upload.ok) throw new Error(await responseError(upload));
       }
 
+      progress = 'Finalizing restore';
+      pendingFinalizeUrl = result.finalizeUrl;
+      const finalize = await fetch(result.finalizeUrl, { method: 'POST' });
+      if (!finalize.ok) {
+        if (finalize.status < 500) pendingFinalizeUrl = null;
+        throw new Error(await responseError(finalize));
+      }
+      pendingFinalizeUrl = null;
+
       password = '';
       backupFile = null;
       progress = 'Backup restored';
       await onComplete();
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Backup import failed');
+      if (preparedImport && !pendingFinalizeUrl) {
+        await fetch(preparedImport.finalizeUrl, { method: 'DELETE' }).catch(() => undefined);
+      }
+      const message = error instanceof Error ? error.message : 'Backup import failed';
+      onError(pendingFinalizeUrl
+        ? `${message}. Use Import backup again to confirm the existing restore.`
+        : message);
       progress = '';
     } finally {
       busy = false;
@@ -147,29 +183,36 @@
   </svg>
   <div class="dialog-layer" role="presentation">
     <button class="dialog-scrim" aria-label="Close backups" onclick={dismiss}></button>
-    <div class="dialog backup-dialog" role="dialog" aria-modal="true" aria-labelledby="backup-title">
+    <div
+      use:modalFocus={{ onDismiss: dismiss }}
+      class="dialog backup-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="backup-title"
+      aria-busy={busy}
+    >
       <header>
         <div class="dialog-title"><ArchiveRestore size={19} /><h2 id="backup-title">Encrypted backup</h2></div>
         <button class="icon-button" aria-label="Close" title="Close" onclick={dismiss}><X size={18} /></button>
       </header>
 
       <div class="segmented-control backup-tabs" aria-label="Backup action">
-        <button class:active={tab === 'export'} onclick={() => { tab = 'export'; progress = ''; }}><Download size={15} /> Export</button>
-        <button class:active={tab === 'import'} onclick={() => { tab = 'import'; progress = ''; }}><Upload size={15} /> Import</button>
+        <button type="button" class:active={tab === 'export'} aria-pressed={tab === 'export'} disabled={busy} onclick={() => { tab = 'export'; progress = ''; }}><Download size={15} aria-hidden="true" /> Export</button>
+        <button type="button" class:active={tab === 'import'} aria-pressed={tab === 'import'} disabled={busy} onclick={() => { tab = 'import'; progress = ''; }}><Upload size={15} aria-hidden="true" /> Import</button>
       </div>
 
       {#if tab === 'export'}
         <form class="dialog-form" onsubmit={(event) => { event.preventDefault(); void exportBackup(); }}>
           <label>
             <span>Password</span>
-            <input type="password" bind:value={password} autocomplete="new-password" minlength="8" />
+            <input data-dialog-initial-focus type="password" bind:value={password} autocomplete="new-password" minlength="8" />
           </label>
           <label>
             <span>Confirm password</span>
             <input type="password" bind:value={confirmation} autocomplete="new-password" minlength="8" />
           </label>
           <button type="submit" class="primary-button wide" disabled={busy}>
-            {#if busy}<LoaderCircle class="spin" size={16} />{:else}<Download size={16} />{/if}
+            {#if busy}<LoaderCircle class="spin" size={16} aria-hidden="true" />{:else}<Download size={16} aria-hidden="true" />{/if}
             Export backup
           </button>
         </form>
@@ -186,20 +229,21 @@
           </label>
           <label>
             <span>Password</span>
-            <input type="password" bind:value={password} autocomplete="current-password" />
+            <input data-dialog-initial-focus type="password" bind:value={password} autocomplete="current-password" />
           </label>
           <div class="segmented-control import-mode" aria-label="Import mode">
-            <button class:active={importMode === 'replace'} onclick={() => importMode = 'replace'}>Replace</button>
-            <button class:active={importMode === 'merge'} onclick={() => importMode = 'merge'}>Merge</button>
+            <button type="button" class:active={importMode === 'replace'} aria-pressed={importMode === 'replace'} disabled={busy} onclick={() => importMode = 'replace'}>Replace</button>
+            <button type="button" class:active={importMode === 'merge'} aria-pressed={importMode === 'merge'} disabled={busy} onclick={() => importMode = 'merge'}>Merge</button>
           </div>
-          <button type="submit" class="primary-button wide" disabled={busy || !backupFile}>
-            {#if busy}<LoaderCircle class="spin" size={16} />{:else}<Upload size={16} />{/if}
-            Import backup
+          <button type="submit" class="primary-button wide" disabled={busy || (!backupFile && !pendingFinalizeUrl)}>
+            {#if busy}<LoaderCircle class="spin" size={16} aria-hidden="true" />{:else}<Upload size={16} aria-hidden="true" />{/if}
+            {pendingFinalizeUrl ? 'Retry restore' : 'Import backup'}
           </button>
         </form>
       {/if}
 
-      {#if progress}<p class="dialog-status">{progress}</p>{/if}
+      <p class="sr-only" role="status">{progress}</p>
+      {#if progress}<p class="dialog-status" aria-hidden="true">{progress}</p>{/if}
     </div>
   </div>
 {/if}

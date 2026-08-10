@@ -2,6 +2,7 @@
   import type { Passkey } from '@better-auth/passkey';
   import { Fingerprint, KeyRound, LoaderCircle, Plus, ShieldCheck, Trash2, X } from '@lucide/svelte';
   import { authClient } from '$lib/auth-client';
+  import { modalFocus } from '$lib/modal-focus';
 
   let {
     open,
@@ -19,20 +20,23 @@
   let registering = $state(false);
   let deletingId = $state<string | null>(null);
   let supported = $state(true);
-  let loadedForOpen = $state(false);
+  let loadGeneration = 0;
+  let openCycleActive = false;
 
   $effect(() => {
     if (!open) {
-      loadedForOpen = false;
+      if (openCycleActive) loadGeneration += 1;
+      openCycleActive = false;
       name = '';
+      loading = false;
       return;
     }
+    if (openCycleActive) return;
 
+    openCycleActive = true;
+    const generation = ++loadGeneration;
     supported = window.isSecureContext && 'PublicKeyCredential' in window;
-    if (!loadedForOpen) {
-      loadedForOpen = true;
-      void loadPasskeys();
-    }
+    void loadPasskeys(generation);
   });
 
   function errorMessage(error: unknown, fallback: string): string {
@@ -51,16 +55,17 @@
     }).format(new Date(value));
   }
 
-  async function loadPasskeys(): Promise<void> {
+  async function loadPasskeys(generation = loadGeneration): Promise<void> {
     loading = true;
     try {
       const result = await authClient.passkey.listUserPasskeys();
       if (result.error) throw result.error;
+      if (generation !== loadGeneration || !open) return;
       passkeys = result.data ?? [];
     } catch (error) {
-      onError(errorMessage(error, 'Could not load passkeys'));
+      if (generation === loadGeneration && open) onError(errorMessage(error, 'Could not load passkeys'));
     } finally {
-      loading = false;
+      if (generation === loadGeneration) loading = false;
     }
   }
 
@@ -105,7 +110,14 @@
 {#if open}
   <div class="dialog-layer" role="presentation">
     <button class="dialog-scrim" aria-label="Close passkeys" onclick={dismiss}></button>
-    <div class="dialog passkey-dialog" role="dialog" aria-modal="true" aria-labelledby="passkey-title">
+    <div
+      use:modalFocus={{ onDismiss: dismiss }}
+      class="dialog passkey-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="passkey-title"
+      aria-busy={loading || registering || deletingId !== null}
+    >
       <header>
         <div class="dialog-title"><Fingerprint size={19} /><h2 id="passkey-title">Passkeys</h2></div>
         <button class="icon-button" aria-label="Close" title="Close" onclick={dismiss}><X size={18} /></button>
@@ -124,6 +136,7 @@
         <div>
           <input
             id="passkey-name"
+            data-dialog-initial-focus
             bind:value={name}
             maxlength="80"
             placeholder="This device"
@@ -140,11 +153,11 @@
       {#if !supported}
         <p class="passkey-unavailable">Passkeys require a supported browser and a secure connection.</p>
       {:else if loading}
-        <div class="passkey-loading"><LoaderCircle class="spin" size={17} /> Loading passkeys...</div>
+        <div class="passkey-loading" role="status"><LoaderCircle class="spin" size={17} /> Loading passkeys...</div>
       {:else if passkeys.length > 0}
-        <div class="passkey-list" aria-label="Registered passkeys">
+        <ul class="passkey-list" aria-label="Registered passkeys">
           {#each passkeys as passkey (passkey.id)}
-            <div class="passkey-row">
+            <li class="passkey-row">
               <span class="passkey-row-icon" aria-hidden="true"><KeyRound size={17} /></span>
               <div>
                 <strong>{passkey.name || 'Passkey'}</strong>
@@ -159,9 +172,9 @@
               >
                 {#if deletingId === passkey.id}<LoaderCircle class="spin" size={15} />{:else}<Trash2 size={15} />{/if}
               </button>
-            </div>
+            </li>
           {/each}
-        </div>
+        </ul>
       {:else}
         <div class="passkey-empty">
           <Fingerprint size={20} />

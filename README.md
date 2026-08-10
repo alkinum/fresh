@@ -23,6 +23,8 @@ Fresh is a personal notebook built with SvelteKit and deployed as a Cloudflare W
 - Interactive task lists that update the saved Markdown directly from the rendered note
 - Titles derived automatically from the first level-one heading
 - Search, favorites, tag filters, responsive navigation, and rich attachment previews
+- Personal Kanban boards with custom columns, editable cards, drag and menu movement
+- Consistent overflow and right-click actions for notes, attachments, tags, boards, columns, and cards
 - Images, audio, video, PDFs, documents, archives, and other files stored in R2
 - Passkey sign-in with in-app device registration and management
 - Password-encrypted `.freshup` backups with merge and replace import modes

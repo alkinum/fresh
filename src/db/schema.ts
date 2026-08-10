@@ -4,7 +4,8 @@ import {
   text,
   integer,
   primaryKey,
-  index
+  index,
+  uniqueIndex
 } from 'drizzle-orm/sqlite-core';
 
 // === better-auth ===
@@ -98,7 +99,9 @@ export const tags = sqliteTable('tags', {
   lastNoteModifiedAt: integer('last_note_modified_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => [
+  uniqueIndex('tags_user_name_unique').on(table.userId, table.name)
+]);
 
 // Note-Tag relation (junction table)
 export const noteTags = sqliteTable('note_tags', {
@@ -123,6 +126,61 @@ export const attachments = sqliteTable('attachments', {
 }, (table) => [
   index('attachments_note_id_idx').on(table.noteId),
   index('attachments_user_id_idx').on(table.userId)
+]);
+
+export const backupImportReceipts = sqliteTable('backup_import_receipts', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  noteCount: integer('note_count').notNull(),
+  tagCount: integer('tag_count').notNull(),
+  boardCount: integer('board_count').notNull(),
+  attachmentCount: integer('attachment_count').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => [
+  index('backup_import_receipts_user_id_idx').on(table.userId),
+  index('backup_import_receipts_user_created_at_idx').on(table.userId, table.createdAt)
+]);
+
+export const kanbanBoards = sqliteTable('kanban_boards', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  color: text('color').notNull(),
+  position: integer('position').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => [
+  index('kanban_boards_user_id_idx').on(table.userId),
+  index('kanban_boards_user_position_idx').on(table.userId, table.position)
+]);
+
+export const kanbanColumns = sqliteTable('kanban_columns', {
+  id: text('id').primaryKey(),
+  boardId: text('board_id').notNull().references(() => kanbanBoards.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  position: integer('position').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => [
+  index('kanban_columns_board_position_idx').on(table.boardId, table.position),
+  index('kanban_columns_user_id_idx').on(table.userId)
+]);
+
+export const kanbanCards = sqliteTable('kanban_cards', {
+  id: text('id').primaryKey(),
+  boardId: text('board_id').notNull().references(() => kanbanBoards.id, { onDelete: 'cascade' }),
+  columnId: text('column_id').notNull().references(() => kanbanColumns.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  position: integer('position').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => [
+  index('kanban_cards_column_position_idx').on(table.columnId, table.position),
+  index('kanban_cards_board_id_idx').on(table.boardId),
+  index('kanban_cards_user_id_idx').on(table.userId)
 ]);
 
 // Relations configuration
@@ -165,13 +223,53 @@ export const attachmentRelations = relations(attachments, ({ one }) => ({
   }),
 }));
 
+export const kanbanBoardRelations = relations(kanbanBoards, ({ many, one }) => ({
+  columns: many(kanbanColumns),
+  cards: many(kanbanCards),
+  user: one(user, {
+    fields: [kanbanBoards.userId],
+    references: [user.id]
+  })
+}));
+
+export const kanbanColumnRelations = relations(kanbanColumns, ({ many, one }) => ({
+  cards: many(kanbanCards),
+  board: one(kanbanBoards, {
+    fields: [kanbanColumns.boardId],
+    references: [kanbanBoards.id]
+  }),
+  user: one(user, {
+    fields: [kanbanColumns.userId],
+    references: [user.id]
+  })
+}));
+
+export const kanbanCardRelations = relations(kanbanCards, ({ one }) => ({
+  column: one(kanbanColumns, {
+    fields: [kanbanCards.columnId],
+    references: [kanbanColumns.id]
+  }),
+  board: one(kanbanBoards, {
+    fields: [kanbanCards.boardId],
+    references: [kanbanBoards.id]
+  }),
+  user: one(user, {
+    fields: [kanbanCards.userId],
+    references: [user.id]
+  })
+}));
+
 // User relations
 export const userRelations = relations(user, ({ many }) => ({
   notes: many(notes),
   tags: many(tags),
+  kanbanBoards: many(kanbanBoards),
+  kanbanColumns: many(kanbanColumns),
+  kanbanCards: many(kanbanCards),
   sessions: many(session),
   accounts: many(account),
   attachments: many(attachments),
+  backupImportReceipts: many(backupImportReceipts),
 }));
 
 // Types
@@ -187,3 +285,11 @@ export type Account = typeof account.$inferSelect;
 export type NewAccount = typeof account.$inferInsert;
 export type Attachment = typeof attachments.$inferSelect;
 export type NewAttachment = typeof attachments.$inferInsert;
+export type BackupImportReceipt = typeof backupImportReceipts.$inferSelect;
+export type NewBackupImportReceipt = typeof backupImportReceipts.$inferInsert;
+export type KanbanBoard = typeof kanbanBoards.$inferSelect;
+export type NewKanbanBoard = typeof kanbanBoards.$inferInsert;
+export type KanbanColumn = typeof kanbanColumns.$inferSelect;
+export type NewKanbanColumn = typeof kanbanColumns.$inferInsert;
+export type KanbanCard = typeof kanbanCards.$inferSelect;
+export type NewKanbanCard = typeof kanbanCards.$inferInsert;

@@ -1,5 +1,6 @@
 import { getDb } from '@/db';
-import { apiError, unauthorized } from '$lib/server/http';
+import { MAX_NOTE_CONTENT_CHARACTERS, MAX_NOTE_JSON_BODY_BYTES } from '$lib/note-limits';
+import { apiError, readJsonBody, unauthorized } from '$lib/server/http';
 import { toggleTaskItem } from '$lib/server/markdown';
 import { deleteNote, getNote, updateNote } from '$lib/server/notes';
 import { json } from '@sveltejs/kit';
@@ -7,7 +8,7 @@ import { z } from 'zod';
 import type { RequestHandler } from './$types';
 
 const updateSchema = z.object({
-  content: z.string().trim().min(1).max(1_000_000).optional(),
+  content: z.string().trim().min(1).max(MAX_NOTE_CONTENT_CHARACTERS).optional(),
   colorIndicator: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
   isFavorite: z.boolean().optional(),
   taskIndex: z.number().int().nonnegative().optional(),
@@ -34,7 +35,7 @@ export const PATCH: RequestHandler = async ({ locals, params, platform, request 
   if (!locals.user || !platform?.env.DB) return unauthorized();
 
   try {
-    const input = updateSchema.parse(await request.json());
+    const input = updateSchema.parse(await readJsonBody(request, MAX_NOTE_JSON_BODY_BYTES));
     const db = getDb(platform.env.DB);
 
     if (input.taskIndex !== undefined && input.taskChecked !== undefined) {

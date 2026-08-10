@@ -1,29 +1,36 @@
 import { getDb } from '@/db';
-import { apiError, unauthorized } from '$lib/server/http';
+import { MAX_NOTE_CONTENT_CHARACTERS, MAX_NOTE_JSON_BODY_BYTES } from '$lib/note-limits';
+import { apiError, readJsonBody, unauthorized } from '$lib/server/http';
 import { createNote, listNotes } from '$lib/server/notes';
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 
 const createSchema = z.object({
-  content: z.string().trim().min(1).max(1_000_000),
+  content: z.string().trim().min(1).max(MAX_NOTE_CONTENT_CHARACTERS),
   colorIndicator: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
   isFavorite: z.boolean().optional()
+});
+const querySchema = z.object({
+  page: z.coerce.number().int().min(1).max(1_000_000).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(30),
+  tagId: z.string().uuid().optional(),
+  favorite: z.enum(['true', 'false']).transform((value) => value === 'true').optional()
 });
 
 export const GET: RequestHandler = async ({ locals, platform, url }) => {
   if (!locals.user || !platform?.env.DB) return unauthorized();
 
   try {
-    const page = Number(url.searchParams.get('page') ?? 1);
-    const limit = Number(url.searchParams.get('limit') ?? 30);
-    const favoriteValue = url.searchParams.get('favorite');
+    const query = querySchema.parse({
+      page: url.searchParams.get('page') ?? undefined,
+      limit: url.searchParams.get('limit') ?? undefined,
+      tagId: url.searchParams.get('tagId') ?? undefined,
+      favorite: url.searchParams.get('favorite') ?? undefined
+    });
     const result = await listNotes(getDb(platform.env.DB), {
       userId: locals.user.id,
-      page: Number.isFinite(page) ? page : 1,
-      limit: Number.isFinite(limit) ? limit : 30,
-      tagId: url.searchParams.get('tagId') ?? undefined,
-      favorite: favoriteValue === null ? undefined : favoriteValue === 'true'
+      ...query
     });
     return json(result);
   } catch (error) {
@@ -35,7 +42,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
   if (!locals.user || !platform?.env.DB) return unauthorized();
 
   try {
-    const input = createSchema.parse(await request.json());
+    const input = createSchema.parse(await readJsonBody(request, MAX_NOTE_JSON_BODY_BYTES));
     const note = await createNote(getDb(platform.env.DB), locals.user.id, input);
     return json(note, { status: 201 });
   } catch (error) {

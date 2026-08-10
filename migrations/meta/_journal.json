@@ -22,6 +22,27 @@
       "when": 1784377060176,
       "tag": "0002_old_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785812497592,
+      "tag": "0003_silky_stellaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786386889780,
+      "tag": "0004_fair_invaders",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1786389247359,
+      "tag": "0005_even_starjammers",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 ## Non-negotiable rules
 
-- Preserve per-user isolation. Every note, tag, attachment, and backup operation must be authorized with the authenticated `userId` on the server.
+- Preserve per-user isolation. Every note, tag, attachment, Kanban board, column, card, and backup operation must be authorized with the authenticated `userId` on the server.
 - Keep credentials, private keys, local databases, backups, browser state, test captures, and generated deployment state out of Git.
 - Validate untrusted request and backup data at the server boundary. Use Zod for structured payloads.
 - Keep source comments and application UI copy in English.
@@ -77,6 +77,7 @@ Vite reads `.env`; Wrangler reads `.dev.vars`. Real values belong only in ignore
 
 - `src/routes/` owns pages and HTTP route handlers.
 - `src/lib/components/` owns reusable Svelte UI.
+- `src/lib/markdown.ts` owns the pure Markdown parser, title/tag derivation, rendering, and task mutation shared by server workflows and local browser demos.
 - `src/lib/server/` owns server-only domain logic and must not be imported into browser code.
 - `src/lib/backup.ts` owns browser-side backup encryption and decryption.
 - `src/db/schema.ts` is the database schema source of truth.
@@ -109,6 +110,9 @@ Keep route handlers thin. Parse requests, verify authentication and bindings, de
 - Never expose raw R2 keys to clients. DTOs expose authenticated application URLs.
 - Parse JSON bodies and imported manifests with Zod. Maintain current maximum lengths unless a product decision explicitly changes them.
 - Keep note creation and updates responsible for deriving titles, rendering Markdown, and synchronizing tags.
+- Keep Kanban board, column, and card reads and writes scoped by both the record ID and the authenticated `userId`.
+- Validate Kanban names and card descriptions at the API boundary. Board creation seeds `To do`, `In progress`, and `Done`; card moves are re-indexed by the server.
+- Keep Kanban board, column, and card reads and writes scoped to the authenticated user; moving a card must also verify that the target column belongs to the same owned board.
 - When deleting a note, remove its R2 objects as well as its D1 data.
 - When a D1 write fails after an R2 upload, delete the uploaded object to avoid orphaned files.
 - Use migrations for schema changes. Do not edit deployed D1 schema manually.
@@ -144,6 +148,7 @@ Keep route handlers thin. Parse requests, verify authentication and bindings, de
 - Validate all manifest relationships and file sizes before restoring.
 - Preserve both merge and replace modes. Imported IDs are remapped to new IDs owned by the current user.
 - A backup format change requires a schema version decision, compatibility tests, and documentation updates.
+- Kanban backup data is exported in schema version 2. Imports must continue accepting version 1 manifests and remap board, column, and card IDs for the current user.
 
 ## Security and open-source hygiene
 

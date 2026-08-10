@@ -1,7 +1,8 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { AlertCircle, Fingerprint, GitFork, LoaderCircle } from '@lucide/svelte';
+  import { AlertCircle, Fingerprint, LoaderCircle } from '@lucide/svelte';
   import { authClient } from '$lib/auth-client';
+  import GitHubIcon from '$lib/components/GitHubIcon.svelte';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
@@ -98,14 +99,14 @@
           {#if authenticating === 'github'}
           <LoaderCircle class="spin" size={19} />
           {:else}
-            <GitFork size={19} />
+            <GitHubIcon size={19} />
           {/if}
           <span>{authenticating === 'github' ? 'Connecting...' : 'Continue with GitHub'}</span>
         </button>
       </div>
 
       {#if !passkeySupported || !data.githubAuthConfigured || errorMessage}
-        <div class="login-message" role="status">
+        <div class="login-message" role={errorMessage ? 'alert' : 'status'}>
           <AlertCircle size={16} />
           <span>{errorMessage || (!passkeySupported
             ? 'Passkeys require a supported browser and a secure connection.'

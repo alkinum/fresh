@@ -8,7 +8,6 @@
     Cloud,
     Code2,
     Fingerprint,
-    GitFork,
     Heading1,
     Image,
     Italic,
@@ -19,6 +18,8 @@
     ShieldCheck,
     Star
   } from '@lucide/svelte';
+  import GitHubIcon from '$lib/components/GitHubIcon.svelte';
+  import LandingNoteDemo from '$lib/components/LandingNoteDemo.svelte';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
@@ -171,28 +172,7 @@
           </ul>
         </div>
 
-        <div class="workflow-tool" aria-label="Markdown note preview">
-          <div class="workflow-tool-head">
-            <span><Code2 size={15} /> Markdown</span>
-            <span class="workflow-status">Saved</span>
-          </div>
-          <div class="workflow-tool-body">
-            <div class="workflow-source">
-              <code># Morning field notes</code>
-              <code>A quiet place for **clear thinking**.</code>
-              <code>- [x] Review sketches</code>
-              <code>- [ ] Share the final idea</code>
-              <code>#design #morning</code>
-            </div>
-            <div class="workflow-rendered">
-              <h3>Morning field notes</h3>
-              <p>A quiet place for <strong>clear thinking</strong>.</p>
-              <div class="fake-task"><span class="fake-check checked"><Check size={11} /></span> Review sketches</div>
-              <div class="fake-task"><span class="fake-check"></span> Share the final idea</div>
-              <footer><span>#design</span><span>#morning</span></footer>
-            </div>
-          </div>
-        </div>
+        <LandingNoteDemo initialNote={data.landingDemoNote} />
       </div>
     </section>
 
@@ -247,7 +227,7 @@
         <strong>Fresh</strong>
       </a>
       <p>Markdown, media, and private backups in one clear notebook.</p>
-      <a href="https://github.com/alkinum/fresh" target="_blank" rel="noreferrer"><GitFork size={15} /> Apache-2.0</a>
+      <a href="https://github.com/alkinum/fresh" target="_blank" rel="noreferrer"><GitHubIcon size={15} /> Apache-2.0</a>
     </div>
   </footer>
 </div>
@@ -704,16 +684,14 @@
     background: var(--primary);
   }
 
-  .hero-note footer,
-  .workflow-rendered footer {
+  .hero-note footer {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
     padding: 9px 13px 11px;
   }
 
-  .hero-note footer span,
-  .workflow-rendered footer span {
+  .hero-note footer span {
     padding: 3px 7px;
     border-radius: 999px;
     color: var(--primary-hover);
@@ -859,7 +837,6 @@
     color: var(--success);
   }
 
-  .workflow-tool,
   .security-tool {
     overflow: hidden;
     border-radius: var(--radius-dialog);
@@ -867,7 +844,6 @@
     box-shadow: var(--shadow-lg);
   }
 
-  .workflow-tool-head,
   .security-tool > header {
     min-height: 52px;
     display: flex;
@@ -878,70 +854,12 @@
     background: var(--surface-toolbar);
   }
 
-  .workflow-tool-head > span:first-child,
   .security-tool > header > span {
     display: inline-flex;
     align-items: center;
     gap: 7px;
     font-size: 12px;
     font-weight: 720;
-  }
-
-  .workflow-status {
-    color: var(--success);
-    font-size: 10px;
-    font-weight: 700;
-  }
-
-  .workflow-tool-body {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .workflow-source,
-  .workflow-rendered {
-    min-width: 0;
-    min-height: 260px;
-    padding: 22px;
-  }
-
-  .workflow-source {
-    display: grid;
-    align-content: start;
-    gap: 14px;
-    border-right: 1px solid var(--border-soft);
-    background: var(--surface-editor);
-  }
-
-  .workflow-source code {
-    color: var(--muted);
-    font-size: 10px;
-    line-height: 1.55;
-    white-space: normal;
-  }
-
-  .workflow-source code:first-child {
-    color: var(--primary-hover);
-  }
-
-  .workflow-rendered {
-    color: var(--text-body);
-    font-size: 11px;
-  }
-
-  .workflow-rendered h3 {
-    margin: 0 0 14px;
-    color: var(--text);
-    font-size: 18px;
-  }
-
-  .workflow-rendered p {
-    margin: 0 0 12px;
-    line-height: 1.65;
-  }
-
-  .workflow-rendered footer {
-    padding-inline: 0;
   }
 
   .security-layout {
@@ -1248,20 +1166,6 @@
 
     .feature-grid p {
       grid-column: 2;
-    }
-
-    .workflow-tool-body {
-      grid-template-columns: 1fr;
-    }
-
-    .workflow-source,
-    .workflow-rendered {
-      min-height: 220px;
-    }
-
-    .workflow-source {
-      border-right: 0;
-      border-bottom: 1px solid var(--border-soft);
     }
 
     .landing-closing {

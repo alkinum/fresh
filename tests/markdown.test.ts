@@ -26,6 +26,12 @@ describe('markdown pipeline', () => {
     expect(tags).toEqual(['keep']);
   });
 
+  it('supports tilde fences and requires a matching closing marker', () => {
+    expect(extractTags('~~~md\n#ignore\n~~~\n#keep')).toEqual(['keep']);
+    expect(extractTags('````md\n#ignore\n```\n#still-ignore')).toEqual([]);
+    expect(extractTags('~~~md\n#ignore\n```\n#still-ignore')).toEqual([]);
+  });
+
   it('uses the first parsed H1 as the note title', () => {
     const content = 'Intro paragraph\n\n```md\n# Not a title\n```\n\n# **Fresh** `ideas` #daily\n\n# Later';
     expect(deriveNoteTitle(content)).toBe('Fresh ideas #daily');

@@ -17,6 +17,7 @@ export interface AttachmentDto {
   size: number;
   createdAt: string;
   url: string;
+  downloadUrl: string;
 }
 
 export interface TagDto {
@@ -49,8 +50,43 @@ export interface PaginatedResult<T> {
   currentPage: number;
 }
 
-export interface BackupManifest {
-  schemaVersion: 1;
+export interface KanbanCardDto {
+  id: string;
+  boardId: string;
+  columnId: string;
+  title: string;
+  description: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KanbanColumnDto {
+  id: string;
+  boardId: string;
+  name: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+  cards: KanbanCardDto[];
+}
+
+export interface KanbanBoardSummaryDto {
+  id: string;
+  name: string;
+  color: string;
+  position: number;
+  columnCount: number;
+  cardCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KanbanBoardDto extends KanbanBoardSummaryDto {
+  columns: KanbanColumnDto[];
+}
+
+interface BackupManifestBase {
   exportedAt: string;
   profile: { name: string; email: string };
   notes: Array<{
@@ -83,3 +119,39 @@ export interface BackupManifest {
     url: string;
   }>;
 }
+
+export interface LegacyBackupManifest extends BackupManifestBase {
+  schemaVersion: 1;
+}
+
+export interface KanbanBackupManifest extends BackupManifestBase {
+  schemaVersion: 2;
+  kanbanBoards: Array<{
+    id: string;
+    name: string;
+    color: string;
+    position: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  kanbanColumns: Array<{
+    id: string;
+    boardId: string;
+    name: string;
+    position: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  kanbanCards: Array<{
+    id: string;
+    boardId: string;
+    columnId: string;
+    title: string;
+    description: string;
+    position: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}
+
+export type BackupManifest = LegacyBackupManifest | KanbanBackupManifest;
