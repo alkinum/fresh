@@ -153,4 +153,6 @@ The version 2 backup contract includes notes, tags, note relations, attachments,
 
 Production setup requires OAuth credentials, a Better Auth secret, the canonical production `BETTER_AUTH_URL`, the correct GitHub callback, migrated D1 schema, and the R2 bucket. Secrets are configured outside Git.
 
+The first production release is served at `https://fresh.pwp.workers.dev`. Its canonical `BETTER_AUTH_URL` uses that origin, and the GitHub OAuth application must register `https://fresh.pwp.workers.dev/api/auth/callback/github`. The production Worker has the four authentication settings stored as secrets, including a separately generated production signing secret. Do not replace that secret with the local development value on later deployments. All six migrations and the `fresh-attachments` bucket were provisioned during the first release; subsequent releases should inspect pending migrations and retain existing resources and secrets.
+
 The Better Auth Passkey plugin derives its WebAuthn relying-party host from `BETTER_AUTH_URL`, uses `Fresh` as the relying-party name, and stores credential metadata in the existing `passkey` table. Registration requires an authenticated session. The app exposes registration, listing, and deletion from the sidebar Passkeys dialog; the login page uses discoverable passkey authentication.

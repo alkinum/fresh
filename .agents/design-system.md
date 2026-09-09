@@ -15,7 +15,7 @@ The current design direction is:
 
 ## Landing page
 
-The public `/` route is a playful notebook desk. The H1 is `Fresh`, with the concrete subtitle “Notes, lists & little plans.” A paper note, small attachment, mini Kanban board, and framed clay character form a purposeful, gently rotated collage. These are illustrative previews, marked `aria-hidden`; the real interactive editor lives in the clearly labeled practice notebook below.
+The public `/` route is a playful notebook desk. The H1 is `Fresh`, with the concrete subtitle “Notes, lists & little plans.” A paper note, small attachment, mini Kanban board, and framed clay notebook mark form a purposeful, gently rotated collage. These are illustrative previews, marked `aria-hidden`; the real interactive editor lives in the clearly labeled practice notebook below.
 
 Keep the hero unframed at page level. Use an asymmetric desktop layout and stack the copy above the desk on phones, preserving readable controls and a complete scene even when that requires scrolling. Later sections use unframed feature descriptions, a real editor playground, and a privacy/backup keepsake. Do not add generic SaaS bento grids, testimonials, pricing cards, decorative gradient orbs, stock imagery, excessive badges, or vague AI-style promises. Mint and peach are small supporting material accents with dark-theme equivalents; blue remains the identity.
 
