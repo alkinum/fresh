@@ -44,7 +44,7 @@ Fresh is a personal notebook built with SvelteKit and deployed as a Cloudflare W
 
 ## Local development
 
-Requirements: Node.js with npm and a GitHub OAuth app for sign-in.
+Requirements: Node.js 24 LTS (recommended), npm, and a GitHub OAuth app for sign-in. Supported Node.js ranges are `^22.13.0`, `^24.0.0`, or `>=26.0.0`.
 
 ```sh
 npm install

@@ -5,7 +5,7 @@ import svelte from 'eslint-plugin-svelte';
 import ts from 'typescript-eslint';
 
 export default defineConfig(
-  globalIgnores(['.svelte-kit/**', 'coverage/**', 'worker-configuration.d.ts', 'migrations/**']),
+  globalIgnores(['.svelte-kit/**', 'coverage/**', 'output/**', 'tmp/**', 'worker-configuration.d.ts', 'migrations/**']),
   js.configs.recommended,
   ts.configs.recommended,
   svelte.configs.recommended,

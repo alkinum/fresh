@@ -11,12 +11,11 @@ import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
 import katex from 'katex';
-import MarkdownIt from 'markdown-it';
+import MarkdownIt, { type StateCore, type Token as MarkdownToken } from 'markdown-it';
 import { full as emoji } from 'markdown-it-emoji';
 import githubAlerts from 'markdown-it-github-alerts';
 import taskLists from 'markdown-it-task-lists';
 import texmath from 'markdown-it-texmath';
-import type StateCore from 'markdown-it/lib/rules_core/state_core.mjs';
 
 const languages = { bash, css, go, javascript, json, markdown, python, rust, typescript, xml, yaml };
 
@@ -32,7 +31,7 @@ function escapeHtml(value: string): string {
     .replaceAll('"', '&quot;');
 }
 
-const md: MarkdownIt = new MarkdownIt({
+const md = new MarkdownIt({
   html: false,
   breaks: true,
   linkify: true,
@@ -131,8 +130,6 @@ const tagPattern = /(?:^|\s)#([\p{L}\p{N}_-]+)/gu;
 const noteTitleLimit = 120;
 const maxTagsPerNote = 100;
 const maxTagLength = 100;
-
-type MarkdownToken = ReturnType<MarkdownIt['parse']>[number];
 
 function tokenText(token: MarkdownToken): string {
   if (token.type === 'softbreak' || token.type === 'hardbreak') return ' ';

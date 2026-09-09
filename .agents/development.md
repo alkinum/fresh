@@ -15,22 +15,36 @@
 | Area | Standard |
 | --- | --- |
 | Package manager | npm with the committed `package-lock.json` |
-| Language | Strict TypeScript and Svelte 5 |
+| Node.js | Node 24 LTS recommended; supported ranges are `^22.13.0`, `^24.0.0`, or `>=26.0.0` |
+| Language | Strict TypeScript 6.x and Svelte 5 |
 | Application | SvelteKit 2 with `@sveltejs/adapter-cloudflare` |
 | Runtime | Cloudflare Workers with `nodejs_compat` |
 | Database | Cloudflare D1 through Drizzle ORM |
 | Object storage | Cloudflare R2 |
 | Authentication | Better Auth with GitHub OAuth and the passkey plugin |
 | Validation | Zod |
-| Unit tests | Vitest |
+| Unit tests | Vitest 5 |
 | Static checks | ESLint and `svelte-check` |
 | Formatting | Prettier, 2 spaces, single quotes, semicolons, 120 column target |
 
 Agent runtime note: when the active repository instructions require RTK, prefix every terminal command with `rtk`. RTK is an agent-side wrapper, not an application dependency. Use `apply_patch` for deliberate manual edits.
 
+## Dependency maintenance
+
+Keep direct dependencies on current stable releases and TypeScript on the latest stable 6.x release. Update both `package.json` and `package-lock.json`, refresh compatible transitive dependencies, and verify a clean `npm ci`. Do not use blanket `--force` or `--legacy-peer-deps` to suppress conflicts.
+
+Current scoped overrides have specific compatibility purposes:
+
+- SvelteKit's `cookie` dependency uses the latest 1.x release, `1.1.1`. Cookie 2 removes `parse` and `serialize`, which SvelteKit still imports, so do not force version 2 until upstream migrates those calls. This replaces the previous global `0.7.2` override.
+- Better Auth's optional `vitest` peer is aligned with the root Vitest 5 dependency. Better Auth 1.7.3 still declares a peer range ending at 4; Fresh does not use its Vitest integration. The application tests and actual session/passkey workflows must pass before retaining this exception.
+- Miniflare's `sharp` is overridden to `0.35.4`, which fixes the libheif vulnerabilities in the version still pinned by the current Wrangler toolchain. Recheck this override when upgrading Wrangler.
+- `esbuild` is kept at the current `0.28.2` across the toolchain, including Drizzle Kit's older loader dependencies.
+
+Markdown-it 15 provides its own public types. Import `StateCore` and `Token` from `markdown-it`; do not restore `@types/markdown-it` or internal `markdown-it/lib/` type imports.
+
 ## Local setup
 
-Requirements are Node.js, npm, a GitHub OAuth application, and local Cloudflare tooling installed through the project dependencies.
+Requirements are a supported Node.js version (24 LTS recommended), npm, a GitHub OAuth application, and local Cloudflare tooling installed through the project dependencies. The Node ranges in `package.json` cover the current ESLint, Vite, Vitest, and Wrangler requirements.
 
 ```sh
 npm install
@@ -153,6 +167,8 @@ Keep route handlers thin. Parse requests, verify authentication and bindings, de
 ## Security and open-source hygiene
 
 The following are intentionally ignored: `.env*` except examples, `.dev.vars*` except examples, local database files, `.freshup`, keys and certificates, `.wrangler/`, `.playwright-cli/`, `output/`, `coverage/`, caches, logs, and build output.
+
+ESLint also excludes `output/` and `tmp/` so disposable browser review scripts and generated artifacts do not enter the source validation surface.
 
 Before committing:
 
