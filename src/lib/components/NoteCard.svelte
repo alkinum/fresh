@@ -8,7 +8,7 @@
     contextMenuAtPointer,
     contextMenuReturnFocus,
     type ContextMenuInitialFocus,
-    type ContextMenuPlacement,
+    type ContextMenuPlacement
   } from '$lib/context-menu';
   import type { AttachmentDto, NoteDto, TagDto } from '$lib/types';
 
@@ -36,10 +36,10 @@
     onDeleteAttachment,
     onTag,
     onCopyTag,
-    onTaskToggle,
+    onTaskToggle
   }: {
     note: NoteDto;
-    onFavorite: (note: NoteDto) => void;
+    onFavorite: (note: NoteDto) => Promise<void> | void;
     onEdit: (note: NoteDto) => void;
     onCopy: (note: NoteDto) => void;
     onDelete: (note: NoteDto) => void;
@@ -51,12 +51,26 @@
 
   let menu = $state<MenuState | null>(null);
   let taskPending = $state(false);
+  let favoritePending = $state(false);
   let contentElement = $state<HTMLDivElement>();
 
   function dateLabel(value: string): string {
     return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(
-      new Date(value),
+      new Date(value)
     );
+  }
+
+  async function changeFavorite(): Promise<void> {
+    if (favoritePending || taskPending) return;
+    favoritePending = true;
+    setTaskControlsDisabled(true);
+    try {
+      await onFavorite(note);
+    } finally {
+      favoritePending = false;
+      await tick();
+      setTaskControlsDisabled(false);
+    }
   }
 
   function setTaskControlsDisabled(disabled: boolean): void {
@@ -68,7 +82,7 @@
   function showNoteMenu(
     placement: ContextMenuPlacement,
     returnFocus: HTMLElement,
-    initialFocus: ContextMenuInitialFocus = 'first',
+    initialFocus: ContextMenuInitialFocus = 'first'
   ): void {
     menu = { kind: 'note', placement, returnFocus, initialFocus };
   }
@@ -115,7 +129,7 @@
       tag,
       placement: contextMenuAtPointer(event, button),
       returnFocus: contextMenuReturnFocus(button),
-      initialFocus: 'first',
+      initialFocus: 'first'
     };
   }
 
@@ -166,7 +180,7 @@
     <div class="note-heading">
       <span class="note-accent" aria-hidden="true"></span>
       <div>
-        <h2>{note.title}</h2>
+        <h2><button class="note-title-button" title="Edit note" onclick={() => onEdit(note)}>{note.title}</button></h2>
         <time datetime={note.updatedAt}>{dateLabel(note.updatedAt)}</time>
       </div>
     </div>
@@ -176,7 +190,9 @@
         aria-label={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
         aria-pressed={note.isFavorite}
         title={note.isFavorite ? 'Remove favorite' : 'Favorite'}
-        onclick={() => onFavorite(note)}
+        disabled={favoritePending || taskPending}
+        aria-busy={favoritePending}
+        onclick={() => void changeFavorite()}
       >
         <Star size={16} fill={note.isFavorite ? 'currentColor' : 'none'} />
       </button>
@@ -236,7 +252,15 @@
         <Edit3 size={15} aria-hidden="true" />
         <span>Edit</span>
       </button>
-      <button role="menuitem" tabindex="-1" onclick={() => runNoteAction(onFavorite)}>
+      <button
+        role="menuitem"
+        tabindex="-1"
+        disabled={favoritePending || taskPending}
+        onclick={() => {
+          menu = null;
+          void changeFavorite();
+        }}
+      >
         <Star size={15} fill={note.isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
         <span>{note.isFavorite ? 'Remove favorite' : 'Add to favorites'}</span>
       </button>

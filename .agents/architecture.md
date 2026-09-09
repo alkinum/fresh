@@ -6,7 +6,7 @@ Fresh is a server-rendered SvelteKit application built into a Cloudflare Worker.
 
 | Layer | Implementation | Responsibility |
 | --- | --- | --- |
-| Browser UI | Svelte 5 components | Editing, filtering loaded notes, previews, the local landing demo, attachment selection, backup encryption |
+| Browser UI | Svelte 5 components | Editing, debounced search requests, previews, the local landing demo, attachment selection, backup encryption |
 | SvelteKit server | Page loads and API handlers | Authentication gates, validation, orchestration, HTTP responses |
 | Domain services | `src/lib/server/` | Notes, tags, Markdown, attachments, backups, upload enforcement |
 | Authentication | Better Auth | GitHub OAuth, WebAuthn passkeys, sessions, account linking, SvelteKit cookies |
@@ -52,7 +52,7 @@ The schema is in `src/db/schema.ts`. Six migrations currently establish authenti
 | `/` | Public Fresh landing page with authenticated or sign-in call to action and a non-persistent interactive note demo |
 | `/login` | Passkey and GitHub OAuth entry, disabled configuration states, animated Fresh brand scene |
 | `/app` | Authenticated notes and Kanban workspace; first page loads 30 notes, tag summaries, and board summaries |
-| `GET /api/notes` | Paginated notes filtered by favorite or tag |
+| `GET /api/notes` | Paginated notes filtered by favorite, tag, and an optional search string (up to 200 characters) |
 | `POST /api/notes` | Create a note from Markdown content |
 | `GET /api/notes/:id` | Return one owned note |
 | `PATCH /api/notes/:id` | Update content, color, favorite, or one rendered task state |
@@ -94,12 +94,14 @@ Saved-note task inputs receive stable parsed indexes. A checkbox request sends a
 
 ## Query and state behavior
 
-- Notes are ordered by favorite state and then most recent update.
+- Notes are ordered by favorite state, most recent update, and ID for deterministic pagination ties.
 - The initial and API default page size is 30; server limits cannot exceed 100.
 - Favorite and tag filters are server queries.
-- The search field is client-side and searches only notes currently loaded into the page state, including title, content, tag names, and attachment filenames.
+- Search runs on the server across the user's entire notebook: title, content, owned tag names, and owned attachment filenames. It uses a literal substring query, combines with favorite/tag filters, and paginates results. SQLite `lower` provides ASCII case folding; non-ASCII text matches literally. This is not an indexed full-text search.
+- The search input debounces requests by 250ms and cancels superseded requests. Loading and failed requests are distinct from an empty result; a failed request has an inline retry. Appended pages deduplicate IDs.
 - Tags are created and related automatically from Markdown. There is no separate tag-management UI.
-- Editing reuses the top composer; saving updates the local list and refreshes tag summaries.
+- Editing reuses the top composer; saving refreshes the filtered list and tag summaries. The composer stays mounted when switching to Kanban so in-memory edits and pending files survive that switch. Changing the edited note and signing out require a discard confirmation when dirty; page navigation has an unsaved-change guard. Drafts are not persisted across reloads.
+- The composer disables editing during save/upload and formatting during Preview. A failed preview replaces stale HTML with an inline retry state.
 - Kanban is a separate workspace view. The page loads board summaries, the active board is fetched on selection, and the tab rail and sidebar both switch boards without a full navigation.
 - New boards start with three columns. Cards can be dragged between columns; move actions in the card menu provide a non-drag path for keyboard and touch users.
 - Kanban boards are ordered by position and start with `To do`, `In progress`, and `Done` columns. Current limits are 30 boards per user, 12 columns per board, and 500 cards per board.
@@ -131,6 +133,8 @@ Export is split between server and browser:
 4. The browser encrypts the ZIP and downloads a `.freshup` file.
 
 Import reverses the flow:
+
+The import UI defaults to merge. Replace requires a visible acknowledgement that all current notes, boards, and files will be replaced. Restore is disabled while the composer has unsaved content, pending attachments, or an active save, because successful restore refreshes the page. Export remains available. Inputs remain locked during restore and while a previous finalization needs confirmation.
 
 1. The browser validates the `FRESHUP1` header, derives the key, decrypts, unzips, and checks attachment sizes. Version 1 manifests remain import-compatible.
 2. The server validates the manifest, remaps every ID for the current user, and stores an expiring prepared session in R2 without changing live D1 data.

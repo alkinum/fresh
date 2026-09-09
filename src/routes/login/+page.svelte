@@ -34,9 +34,10 @@
     try {
       const result = await authClient.signIn.passkey();
       if (result.error) {
-        errorMessage = 'code' in result.error && result.error.code === 'AUTH_CANCELLED'
-          ? 'Passkey sign-in was cancelled.'
-          : result.error.message ?? 'Passkey sign-in failed';
+        errorMessage =
+          'code' in result.error && result.error.code === 'AUTH_CANCELLED'
+            ? 'Passkey sign-in was cancelled.'
+            : (result.error.message ?? 'Passkey sign-in failed');
         return;
       }
       location.assign('/app');
@@ -55,9 +56,18 @@
 <div class="login-page">
   <div class="login-backdrop" aria-hidden="true">
     <svg class="login-waves" viewBox="0 0 1600 560" preserveAspectRatio="none">
-      <path class="login-wave wave-one" d="M-240 250 C 40 55, 340 470, 650 255 S 1120 45, 1450 300 S 1740 435, 1840 260 L1840 640 L-240 640 Z" />
-      <path class="login-wave wave-two" d="M-220 365 C -15 505, 190 145, 430 330 S 805 525, 1045 285 S 1435 120, 1810 365 L1810 640 L-220 640 Z" />
-      <path class="login-wave wave-three" d="M-220 455 C 125 340, 390 535, 720 438 S 1190 345, 1505 458 S 1730 510, 1840 420 L1840 640 L-220 640 Z" />
+      <path
+        class="login-wave wave-one"
+        d="M-240 250 C 40 55, 340 470, 650 255 S 1120 45, 1450 300 S 1740 435, 1840 260 L1840 640 L-240 640 Z"
+      />
+      <path
+        class="login-wave wave-two"
+        d="M-220 365 C -15 505, 190 145, 430 330 S 805 525, 1045 285 S 1435 120, 1810 365 L1810 640 L-220 640 Z"
+      />
+      <path
+        class="login-wave wave-three"
+        d="M-220 455 C 125 340, 390 535, 720 438 S 1190 345, 1505 458 S 1730 510, 1840 420 L1840 640 L-220 640 Z"
+      />
     </svg>
   </div>
 
@@ -70,7 +80,7 @@
 
       <div class="login-copy">
         <h1 id="login-title">Welcome back</h1>
-        <p>Sign in to continue to your notes.</p>
+        <p>Your notes, lists, and little plans are right here.</p>
       </div>
 
       <div class="login-actions">
@@ -97,7 +107,7 @@
           onclick={() => void signIn()}
         >
           {#if authenticating === 'github'}
-          <LoaderCircle class="spin" size={19} />
+            <LoaderCircle class="spin" size={19} />
           {:else}
             <GitHubIcon size={19} />
           {/if}
@@ -105,12 +115,17 @@
         </button>
       </div>
 
+      <p class="login-help">New to Fresh? Start with GitHub, then add a passkey from your notebook.</p>
+
       {#if !passkeySupported || !data.githubAuthConfigured || errorMessage}
         <div class="login-message" role={errorMessage ? 'alert' : 'status'}>
           <AlertCircle size={16} />
-          <span>{errorMessage || (!passkeySupported
-            ? 'Passkeys require a supported browser and a secure connection.'
-            : 'GitHub sign-in is not configured on this environment.')}</span>
+          <span
+            >{errorMessage ||
+              (!passkeySupported
+                ? 'Passkeys require a supported browser and a secure connection.'
+                : 'GitHub sign-in is not configured on this environment.')}</span
+          >
         </div>
       {/if}
     </section>

@@ -3,7 +3,7 @@
   import {
     resolveContextMenuPosition,
     type ContextMenuInitialFocus,
-    type ContextMenuPlacement,
+    type ContextMenuPlacement
   } from '$lib/context-menu';
 
   let {
@@ -13,7 +13,7 @@
     returnFocus,
     initialFocus = 'first',
     onClose,
-    children,
+    children
   }: {
     id: string;
     label: string;
@@ -37,20 +37,20 @@
     'input:not(:disabled):not([type="hidden"])',
     'select:not(:disabled)',
     'textarea:not(:disabled)',
-    '[tabindex]:not([tabindex="-1"])',
+    '[tabindex]:not([tabindex="-1"])'
   ].join(',');
 
   function portal(node: HTMLElement): { destroy: () => void } {
     node.ownerDocument.body.appendChild(node);
     return {
-      destroy: () => node.remove(),
+      destroy: () => node.remove()
     };
   }
 
   function menuItems(): HTMLElement[] {
     if (!menuElement) return [];
     return Array.from(
-      menuElement.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"]):not(:disabled)'),
+      menuElement.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"]):not(:disabled)')
     );
   }
 
@@ -58,12 +58,12 @@
     if (items.length === 0) return;
     const normalizedIndex = (index + items.length) % items.length;
     for (const [itemIndex, item] of items.entries()) item.tabIndex = itemIndex === normalizedIndex ? 0 : -1;
-    items[normalizedIndex].focus();
+    items[normalizedIndex].focus({ preventScroll: true });
   }
 
   async function placeMenu(
     requestedPlacement: ContextMenuPlacement,
-    requestedInitialFocus: ContextMenuInitialFocus,
+    requestedInitialFocus: ContextMenuInitialFocus
   ): Promise<void> {
     const token = ++placementToken;
     ready = false;
@@ -74,7 +74,7 @@
     const position = resolveContextMenuPosition(
       requestedPlacement,
       { width: bounds.width, height: bounds.height },
-      { width: window.innerWidth, height: window.innerHeight },
+      { width: window.innerWidth, height: window.innerHeight }
     );
     left = position.left;
     top = position.top;
@@ -97,12 +97,13 @@
   }
 
   function adjacentPageControl(backward: boolean): HTMLElement | null {
-    const candidates = Array.from(document.querySelectorAll<HTMLElement>(pageFocusableSelector)).filter((element) => (
-      !menuElement?.contains(element)
-      && !element.closest('[inert]')
-      && !element.closest('[aria-hidden="true"]')
-      && element.getClientRects().length > 0
-    ));
+    const candidates = Array.from(document.querySelectorAll<HTMLElement>(pageFocusableSelector)).filter(
+      (element) =>
+        !menuElement?.contains(element) &&
+        !element.closest('[inert]') &&
+        !element.closest('[aria-hidden="true"]') &&
+        element.getClientRects().length > 0
+    );
     const triggerIndex = returnFocus ? candidates.indexOf(returnFocus) : -1;
     if (triggerIndex < 0) return returnFocus;
     return candidates[triggerIndex + (backward ? -1 : 1)] ?? returnFocus;
@@ -153,7 +154,8 @@
     }
   }
 
-  function handleFocusOut(): void {
+  function handleFocusOut(event: FocusEvent): void {
+    if (event.relatedTarget instanceof Node && menuElement?.contains(event.relatedTarget)) return;
     queueMicrotask(() => {
       if (menuElement && !menuElement.contains(document.activeElement)) onClose();
     });

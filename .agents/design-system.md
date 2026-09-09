@@ -2,7 +2,7 @@
 
 ## Design intent
 
-Fresh should feel clear, lively, cute, tidy, and calm enough for repeated writing. It is a focused notebook, not a marketing page. The interface should be friendly without becoming decorative, childish, or visually noisy.
+Fresh should feel clear, lively, unmistakably cute, and calm enough for repeated writing. Every page shares a soft, tactile notebook language: rounded paper surfaces, small physical button edges, the clay notebook mark, cheerful useful copy, and clean typography. Cuteness must support a recognizable product rather than become visual noise.
 
 The current design direction is:
 
@@ -15,9 +15,9 @@ The current design direction is:
 
 ## Landing page
 
-The public `/` route is an immersive product view, not a generic SaaS template. Its first viewport uses the real Fresh workspace language as the scene: rounded navigation shell, editor toolbar, note cards, tags, tasks, and the exported product mark. The H1 is the product name `Fresh`; supporting copy carries the value proposition.
+The public `/` route is a playful notebook desk. The H1 is `Fresh`, with the concrete subtitle “Notes, lists & little plans.” A paper note, small attachment, mini Kanban board, and framed clay character form a purposeful, gently rotated collage. These are illustrative previews, marked `aria-hidden`; the real interactive editor lives in the clearly labeled practice notebook below.
 
-Keep the hero unframed at page level, with the product canvas acting as a genuine tool surface behind the copy. The next feature band must remain visible at the bottom of every desktop and mobile first viewport. Later sections are full-width bands with unframed copy and only genuine product tools framed as panels. Do not introduce testimonial cards, pricing cards, decorative gradient orbs, abstract SVG hero art, or stock imagery.
+Keep the hero unframed at page level. Use an asymmetric desktop layout and stack the copy above the desk on phones, preserving readable controls and a complete scene even when that requires scrolling. Later sections use unframed feature descriptions, a real editor playground, and a privacy/backup keepsake. Do not add generic SaaS bento grids, testimonials, pricing cards, decorative gradient orbs, stock imagery, excessive badges, or vague AI-style promises. Mint and peach are small supporting material accents with dark-theme equivalents; blue remains the identity.
 
 The landing workflow demo must reuse the production `NoteComposer` and `NoteCard` components with the shared Markdown pipeline. It may provide local-only adapters for preview, save, tasks, favorites, attachments, and item actions, but must never approximate the editor or rendered note with separate mock markup or persist demo content to an account.
 
@@ -29,9 +29,9 @@ Core geometry tokens:
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--radius-shell` | 20px | Sidebar and large shell geometry |
-| `--radius-dialog` | 18px | Dialogs |
-| `--radius-panel` | 16px | Composer, note cards, larger grouped controls |
+| `--radius-shell` | 24px | Sidebar and large shell geometry |
+| `--radius-dialog` | 22px | Dialogs |
+| `--radius-panel` | 18px | Composer, note cards, larger grouped controls |
 | `--radius-control` | 12px | Buttons, fields, navigation rows |
 | `--radius-icon` | 10px | Compact icon controls |
 | `--radius-small` | 8px | Menus and small inner controls |
@@ -43,7 +43,7 @@ Do not default everything to maximum rounding. The radius should communicate hie
 Light theme anchors:
 
 - Background: `#edf5f8`.
-- Primary: `#5288e8`; hover: `#3f76d8`.
+- Primary brand: `#5288e8`; action fill: `#346bc7`; hover and emphasis: `#2e61b8`. Use the darker action token for small light-on-blue button labels.
 - Main text: `#263246`; body text: `#40566c`.
 - Sidebar: `#f8fbfc`; core surface: `#fbfdff`.
 
@@ -63,7 +63,8 @@ Secondary colors are semantic, not decorative: green for success, coral/red for 
 - Interface stack: `Avenir Next`, Avenir, `Segoe UI`, sans-serif.
 - Editor and code stack: `SFMono-Regular`, Consolas, monospace.
 - Keep interface headings compact. The notebook does not use hero-scale type.
-- Current page heading is 18px, note title is 14px, body Markdown is 13px with 1.72 line height, and compact metadata is 10 to 12px.
+- The notebook page heading is 26px (22px on phones), its notes section heading is 16px, note titles are 15px, body Markdown is 14px with 1.72 line height, and note dates are 11px.
+- Editable text fields use at least 16px on phones to avoid automatic focus zoom. Secondary text must remain readable; light-theme muted and faint tokens are `#5d6e82` and `#687b8e`.
 - Font weight creates hierarchy; letter spacing remains zero.
 - Long names and titles must truncate or wrap intentionally without widening their containers.
 
@@ -71,7 +72,7 @@ Secondary colors are semantic, not decorative: green for success, coral/red for 
 
 Desktop uses a 288px shell column and a flexible workspace. The sidebar is inset by 12px, fills the viewport height minus its margins, and is one rounded shell. Workspace content is capped at 1440px.
 
-The composer is the first work surface, followed by a compact notes header and a responsive grid. Note cards use `auto-fill` with a minimum target width of 360px. Avoid wrapping major page sections in extra cards.
+An unframed notebook heading and New note action precede the composer. The composer is the first work surface, followed by a compact notes header and a responsive grid. Note cards use `auto-fill` with a minimum target width of 360px. Avoid wrapping major page sections in extra cards.
 
 Responsive rules:
 
@@ -87,6 +88,7 @@ Responsive rules:
 - Use icon buttons for familiar tool actions and add `aria-label` plus `title` where useful.
 - Use official brand marks for branded destinations and authentication. GitHub surfaces use the GitHub mark, never generic Git or fork icons.
 - Use icon plus text buttons for clear commands such as save, export, and import.
+- Primary commands may have a small solid lower edge and inset highlight for a tactile pressed state. Keep this restrained inside the workspace; the landing CTA is the more expressive version.
 - Use segmented controls for mutually exclusive modes such as Write/Preview, Export/Import, and Replace/Merge.
 - Use checkboxes for task completion and preserve their optimistic pending behavior.
 - Use the styled file picker. Do not expose the browser's raw file input UI.
@@ -95,11 +97,15 @@ Responsive rules:
 - Kanban columns are genuine work surfaces and cards are draggable records. Always pair drag-and-drop with explicit move-left/move-right actions for touch and keyboard users.
 - New board, card, and column creation uses the existing dialog and inline-form patterns. Board colors are represented as swatches, not text labels.
 - Overflow buttons and right-click surfaces must render the same command set. Current item menus cover notes, attachments, tags, boards, columns, and cards.
-- Context menus are viewport-clamped, use `--radius-small`, close on outside interaction or Escape, restore focus to the invoking control, and support Arrow Up/Down plus Home/End navigation.
+- Context menus are viewport-clamped, use `--radius-small`, close on outside interaction or Escape, restore focus to the invoking control, and support Arrow Up/Down plus Home/End navigation. Moving focus between menu items must not scroll the page.
 - Portaled context menus opened from a dialog or mobile sidebar remain inside that modal's live focus scope; do not let the portal become inert or escape focus handling.
 - Preserve the browser's native context menu for selected text, links, audio, video, and embedded documents when it offers capabilities Fresh does not reproduce.
 - Keep cards for notes and genuine media items. Do not nest decorative cards inside other cards.
-- Use confirmation before deleting a note, attachment, board, column, or card.
+- Use the shared `ConfirmDialog` before deleting a note, attachment, board, column, card, or passkey. It names the affected content, explains the consequence, initially focuses Cancel, and restores focus when dismissed. Mount a confirmation opened from an existing dialog inside that dialog's focus scope.
+- The same confirmation pattern protects unsaved editor changes. Browser leave/reload confirmation uses the native navigation guard.
+- Import defaults to Merge with a short explanation. Replace shows an explicit acknowledgement of permanent replacement; disable submission until acknowledged. Require the current editor draft to be saved before restoring; export remains available.
+- Empty states explain the current context (new notebook, favorites, tag, or search) and offer a useful next action. Loading and request errors must never appear as a misleading empty notebook.
+- Note titles are keyboard-accessible edit buttons. Titles wrap within their cards while favorite and menu actions retain their width.
 - Toasts report short success or failure outcomes; do not use them for permanent instructions.
 
 ## Liquid Glass
@@ -118,7 +124,7 @@ Any glass component must have a solid fallback under `prefers-reduced-transparen
 
 ## Brand and assets
 
-Use the exported bitmap assets in `public/`. The primary product mark is `favicon-256x256.png`; the PWA set includes regular and maskable variants up to 512px.
+Use the exported bitmap assets in `public/`. The mark is a plump blue soft-cover journal with a clean blank cover, ivory paper edges, a cream ribbon bookmark, and a short sky-blue pencil. Its rounded proportions and matte clay texture provide the cute character. Keep the cover free of facial features and decorative writing lines. It was generated with `openai/gpt-image-2.5-flare` through the user-requested Replicate CLI. The 1024px regular master is `fresh-icon.png`, the navigation mark is `favicon-256x256.png`, and the PWA set includes regular and maskable variants up to 512px. Regular exports have rounded transparent corners; maskable exports retain an opaque icy-blue background and wider safe padding. Preserve the recognizable bound spine, paper edges, writing cue, tactile material, and existing blue palette. The mark must communicate note-taking at small sizes. The prompt and export recipe are recorded in the dated review.
 
 The mark must have separation from its background. The established treatment is a padded frame with a semantic blue surface, highlight, inner border, outer ring, and tinted shadow. Dark mode adjusts image saturation, brightness, and contrast. Do not place the raw mark directly on a same-value background.
 
@@ -135,6 +141,7 @@ Editor requirements:
 - Keep Write/Preview state stable and avoid layout jumps.
 - Keep formatting tools icon-led and horizontally stable.
 - Show selected attachment filenames in styled pending chips.
+- Give the composer a compact heading and a short Markdown hint. Keep it mounted during workspace switches, disable editing while saving, and show a dedicated retry state after a preview error.
 
 Rendered Markdown is product UI and must be styled consistently. Maintain deliberate styles for headings, links, inline code, highlighted code blocks, blockquotes, tables, images, horizontal rules, KaTeX, GitHub alerts, tags, nested lists, and tasks.
 

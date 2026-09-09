@@ -9,31 +9,33 @@ import {
   getKanbanBoard,
   updateKanbanCard
 } from '../src/lib/server/kanban';
-import { createNote, getNote, listTags, updateNote } from '../src/lib/server/notes';
+import { createNote, getNote, listNotes, listTags, updateNote } from '../src/lib/server/notes';
 
 const userId = 'user-1';
 
 async function createRuntime() {
   const miniflare = new Miniflare({
-    workers: [{
-      config: {
-        name: 'd1-domain-test',
-        type: 'worker',
-        compatibilityDate: '2026-07-17',
-        manifest: {
-          mainModule: 'index.js',
-          modules: {
-            'index.js': {
-              type: 'esm',
-              contents: 'export default { fetch() { return new Response("ok") } }'
+    workers: [
+      {
+        config: {
+          name: 'd1-domain-test',
+          type: 'worker',
+          compatibilityDate: '2026-07-17',
+          manifest: {
+            mainModule: 'index.js',
+            modules: {
+              'index.js': {
+                type: 'esm',
+                contents: 'export default { fetch() { return new Response("ok") } }'
+              }
             }
-          }
-        },
-        env: { DB: { type: 'd1' } }
+          },
+          env: { DB: { type: 'd1' } }
+        }
       }
-    }]
+    ]
   });
-  const d1 = await miniflare.getD1Database('DB') as D1Database;
+  const d1 = (await miniflare.getD1Database('DB')) as D1Database;
   await d1.batch([
     d1.prepare(`CREATE TABLE notes (
       id TEXT PRIMARY KEY, user_id TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL,
@@ -85,6 +87,46 @@ describe('D1 domain transactions', () => {
     await runtime?.miniflare.dispose();
   });
 
+  it('searches beyond the loaded page, combines filters, and treats wildcard characters literally', async () => {
+    if (!runtime) throw new Error('Test runtime was not initialized');
+    const { db } = runtime;
+    const first = await createNote(db, userId, { content: '# Older\n\nBudget 50%_complete #plans', isFavorite: true });
+    await createNote(db, userId, { content: '# Newer\n\nAnother plan' });
+    await createNote(db, 'other-user', { content: '# Private\n\n50%_complete #plans', isFavorite: true });
+
+    const found = await listNotes(db, { userId, search: '50%_', limit: 1 });
+    expect(found.items.map((note) => note.id)).toEqual([first.id]);
+    expect(found.totalItems).toBe(1);
+    expect((await listNotes(db, { userId, search: 'OLDER', favorite: true, tagId: first.tags[0].id })).totalItems).toBe(
+      1
+    );
+    expect((await listNotes(db, { userId, search: 'OLDER', favorite: false })).totalItems).toBe(0);
+    const pageOne = await listNotes(db, { userId, limit: 1 });
+    const pageTwo = await listNotes(db, { userId, limit: 1, page: 2 });
+    expect(pageOne.items[0].id).not.toBe(pageTwo.items[0].id);
+    expect(pageOne.totalItems).toBe(2);
+  });
+
+  it('searches owned filenames and ignores foreign attachment metadata', async () => {
+    if (!runtime) throw new Error('Test runtime was not initialized');
+    const { db, d1 } = runtime;
+    const note = await createNote(db, userId, { content: '# Research\n\nField notes' });
+    await d1.batch(
+      ['user-1', 'other-user'].map((owner, index) =>
+        d1
+          .prepare(
+            `
+      INSERT INTO attachments VALUES (?, ?, ?, ?, ?, 'text/plain', 'text', 10, 1)
+    `
+          )
+          .bind(`file-${index}`, note.id, owner, `key-${index}`, index ? 'secret.txt' : '调研-report.txt')
+      )
+    );
+    expect((await listNotes(db, { userId, search: '调研' })).items.map((item) => item.id)).toEqual([note.id]);
+    expect((await listNotes(db, { userId, search: 'REPORT.TXT' })).totalItems).toBe(1);
+    expect((await listNotes(db, { userId, search: 'secret' })).totalItems).toBe(0);
+  });
+
   it('deduplicates tags across concurrent note writes and rebuilds relations atomically', async () => {
     if (!runtime) throw new Error('Test runtime was not initialized');
     const [first, second] = await Promise.all([
@@ -92,16 +134,24 @@ describe('D1 domain transactions', () => {
       createNote(runtime.db, userId, { content: '# Second\n\n#shared' })
     ]);
 
-    expect(await runtime.d1.prepare(`SELECT count(*) AS count FROM tags WHERE name = 'shared'`).first<number>('count'))
-      .toBe(1);
+    expect(
+      await runtime.d1.prepare(`SELECT count(*) AS count FROM tags WHERE name = 'shared'`).first<number>('count')
+    ).toBe(1);
     expect(await runtime.d1.prepare('SELECT count(*) AS count FROM note_tags').first<number>('count')).toBe(2);
 
     await updateNote(runtime.db, userId, first.id, { content: '# First\n\n#other' });
-    expect(await runtime.d1.prepare(`
+    expect(
+      await runtime.d1
+        .prepare(
+          `
       SELECT count(*) AS count FROM note_tags
       INNER JOIN tags ON tags.id = note_tags.tag_id
       WHERE note_tags.note_id = ? AND tags.name = 'other'
-    `).bind(first.id).first<number>('count')).toBe(1);
+    `
+        )
+        .bind(first.id)
+        .first<number>('count')
+    ).toBe(1);
     expect(second.tags.map((tag) => tag.name)).toEqual(['shared']);
   });
 
@@ -170,9 +220,14 @@ describe('D1 domain transactions', () => {
       updateNote(runtime.db, userId, note.id, { isFavorite: true })
     ]);
 
-    const updated = await runtime.d1.prepare(`
+    const updated = await runtime.d1
+      .prepare(
+        `
       SELECT content, is_favorite AS isFavorite FROM notes WHERE id = ?
-    `).bind(note.id).first<{ content: string; isFavorite: number }>();
+    `
+      )
+      .bind(note.id)
+      .first<{ content: string; isFavorite: number }>();
     expect(updated).toEqual({ content: '# Updated', isFavorite: 1 });
   });
 
@@ -184,13 +239,15 @@ describe('D1 domain transactions', () => {
     const foreignTagId = foreign.tags[0].id;
 
     await runtime.d1.batch([
-      runtime.d1.prepare(`
+      runtime.d1
+        .prepare(
+          `
         INSERT INTO attachments VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind('foreign-file', owned.id, 'user-2', 'foreign-object', 'foreign.txt', 'text/plain', 'text', 1, 1),
-      runtime.d1.prepare('INSERT INTO note_tags (note_id, tag_id) VALUES (?, ?)')
-        .bind(owned.id, foreignTagId),
-      runtime.d1.prepare('INSERT INTO note_tags (note_id, tag_id) VALUES (?, ?)')
-        .bind(foreign.id, ownedTagId)
+      `
+        )
+        .bind('foreign-file', owned.id, 'user-2', 'foreign-object', 'foreign.txt', 'text/plain', 'text', 1, 1),
+      runtime.d1.prepare('INSERT INTO note_tags (note_id, tag_id) VALUES (?, ?)').bind(owned.id, foreignTagId),
+      runtime.d1.prepare('INSERT INTO note_tags (note_id, tag_id) VALUES (?, ?)').bind(foreign.id, ownedTagId)
     ]);
 
     const hydrated = await getNote(runtime.db, userId, owned.id);
@@ -211,60 +268,72 @@ describe('D1 domain transactions', () => {
     if (!ownedCard) throw new Error('Owned card was not created');
 
     await runtime.d1.batch([
-      runtime.d1.prepare(`
+      runtime.d1
+        .prepare(
+          `
         INSERT INTO note_tags (note_id, tag_id) VALUES (?, ?)
-      `).bind(ownedNote.id, foreignNote.tags[0].id),
-      runtime.d1.prepare(`
+      `
+        )
+        .bind(ownedNote.id, foreignNote.tags[0].id),
+      runtime.d1
+        .prepare(
+          `
         INSERT INTO note_tags (note_id, tag_id) VALUES (?, ?)
-      `).bind(foreignNote.id, ownedNote.tags[0].id),
-      runtime.d1.prepare(`
+      `
+        )
+        .bind(foreignNote.id, ownedNote.tags[0].id),
+      runtime.d1
+        .prepare(
+          `
         INSERT INTO attachments VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind('foreign-file', ownedNote.id, 'user-2', 'foreign-object', 'foreign.txt', 'text/plain', 'text', 1, 1),
-      runtime.d1.prepare(`
+      `
+        )
+        .bind('foreign-file', ownedNote.id, 'user-2', 'foreign-object', 'foreign.txt', 'text/plain', 'text', 1, 1),
+      runtime.d1
+        .prepare(
+          `
         INSERT INTO kanban_columns VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).bind('foreign-column', ownedBoard.id, 'user-2', 'Foreign column', 99, 1, 1),
-      runtime.d1.prepare(`
+      `
+        )
+        .bind('foreign-column', ownedBoard.id, 'user-2', 'Foreign column', 99, 1, 1),
+      runtime.d1
+        .prepare(
+          `
         INSERT INTO kanban_columns VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).bind('owned-column-on-foreign-board', foreignBoard.id, userId, 'Wrong board', 99, 1, 1),
-      runtime.d1.prepare(`
+      `
+        )
+        .bind('owned-column-on-foreign-board', foreignBoard.id, userId, 'Wrong board', 99, 1, 1),
+      runtime.d1
+        .prepare(
+          `
         INSERT INTO kanban_cards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        'foreign-card',
-        ownedBoard.id,
-        ownedBoard.columns[0].id,
-        'user-2',
-        'Foreign card',
-        '',
-        99,
-        1,
-        1
-      ),
-      runtime.d1.prepare(`
+      `
+        )
+        .bind('foreign-card', ownedBoard.id, ownedBoard.columns[0].id, 'user-2', 'Foreign card', '', 99, 1, 1),
+      runtime.d1
+        .prepare(
+          `
         INSERT INTO kanban_cards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        'owned-card-on-foreign-board',
-        foreignBoard.id,
-        foreignBoard.columns[0].id,
-        userId,
-        'Wrong board',
-        '',
-        99,
-        1,
-        1
-      ),
-      runtime.d1.prepare(`
+      `
+        )
+        .bind(
+          'owned-card-on-foreign-board',
+          foreignBoard.id,
+          foreignBoard.columns[0].id,
+          userId,
+          'Wrong board',
+          '',
+          99,
+          1,
+          1
+        ),
+      runtime.d1
+        .prepare(
+          `
         INSERT INTO kanban_cards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        'owned-card-with-foreign-column',
-        ownedBoard.id,
-        'foreign-column',
-        userId,
-        'Wrong column',
-        '',
-        100,
-        1,
-        1
-      )
+      `
+        )
+        .bind('owned-card-with-foreign-column', ownedBoard.id, 'foreign-column', userId, 'Wrong column', '', 100, 1, 1)
     ]);
 
     const manifest = await createBackupManifest(runtime.db, userId, {
@@ -294,12 +363,17 @@ describe('D1 domain transactions', () => {
       1,
       1
     ]);
-    await runtime.d1.prepare(`
+    await runtime.d1
+      .prepare(
+        `
       INSERT INTO kanban_boards (id, user_id, name, color, position, created_at, updated_at)
       SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]'), json_extract(value, '$[2]'),
         json_extract(value, '$[3]'), json_extract(value, '$[4]'), json_extract(value, '$[5]'),
         json_extract(value, '$[6]') FROM json_each(?)
-    `).bind(JSON.stringify(rows)).run();
+    `
+      )
+      .bind(JSON.stringify(rows))
+      .run();
 
     const results = await Promise.allSettled([
       createKanbanBoard(runtime.db, userId, { name: 'Concurrent A' }),

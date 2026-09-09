@@ -1,1270 +1,1219 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import {
+    ArrowDown,
     ArrowRight,
-    Bold,
-    Braces,
     Check,
-    Cloud,
-    Code2,
+    FileText,
     Fingerprint,
-    Heading1,
+    Heart,
     Image,
-    Italic,
-    KeyRound,
-    ListChecks,
+    LayoutDashboard,
     LockKeyhole,
     Paperclip,
-    ShieldCheck,
+    PenLine,
+    Sparkles,
     Star
   } from '@lucide/svelte';
   import GitHubIcon from '$lib/components/GitHubIcon.svelte';
   import LandingNoteDemo from '$lib/components/LandingNoteDemo.svelte';
   import type { PageData } from './$types';
-
   let { data }: { data: PageData } = $props();
   let appHref = $derived(data.user ? resolve('/app') : resolve('/login'));
-  let appLabel = $derived(data.user ? 'Open Fresh' : 'Start writing');
+  let appLabel = $derived(data.user ? 'Open your notebook' : 'Make yourself at home');
 </script>
 
 <svelte:head>
-  <title>Fresh | A clear place for every note</title>
+  <title>Fresh | Notes, lists &amp; little plans</title>
   <meta
     name="description"
-    content="A private, cheerful notebook for Markdown, media, living task lists, passkeys, and encrypted backups."
+    content="A cheerful private notebook for Markdown notes, little plans, Kanban boards, and the files that belong with them. Try the editor right here."
   />
 </svelte:head>
 
 <div class="landing-page">
-  <header class="landing-nav-shell">
-    <nav class="landing-nav" aria-label="Main navigation">
-      <a class="landing-brand" href={resolve('/')} aria-label="Fresh home">
-        <span class="brand-mark" aria-hidden="true"><img src="/favicon-256x256.png" alt="" /></span>
-        <strong>Fresh</strong>
-      </a>
-
-      <div class="landing-nav-links">
-        <a href="#features">Features</a>
-        <a href="#security">Security</a>
-        <a class="landing-nav-action" href={appHref}>
-          <span>{data.user ? 'Open app' : 'Sign in'}</span>
-          <ArrowRight size={15} />
-        </a>
-      </div>
+  <a class="skip-link" href="#landing-main">Skip to content</a>
+  <header class="site-header page-width">
+    <a class="wordmark" href={resolve('/')} aria-label="Fresh home"
+      ><span class="brand-mark" aria-hidden="true"><img src="/favicon-256x256.png" alt="" /></span><strong>Fresh</strong
+      ></a
+    >
+    <nav aria-label="Main navigation">
+      <a class="text-link" href="#inside">A look inside</a><a class="text-link" href="#playground">Try it out</a><a
+        class="header-action"
+        href={appHref}>{data.user ? 'Open app' : 'Sign in'}<ArrowRight size={16} /></a
+      >
     </nav>
   </header>
-
-  <main>
-    <section class="landing-hero" aria-labelledby="landing-title">
-      <div class="hero-canvas" aria-hidden="true">
-        <div class="hero-toolbar">
-          <span><Bold size={15} /></span>
-          <span><Italic size={15} /></span>
-          <span><Heading1 size={15} /></span>
-          <span><ListChecks size={15} /></span>
-          <span><Braces size={15} /></span>
-          <span><Paperclip size={15} /></span>
-          <div class="hero-mode"><span>Write</span><span>Preview</span></div>
-        </div>
-        <div class="hero-writing-line"></div>
-        <div class="hero-writing-line short"></div>
-      </div>
-
-      <aside class="hero-rail" aria-hidden="true">
-        <div class="hero-rail-brand">
-          <span class="brand-mark"><img src="/favicon-256x256.png" alt="" /></span>
-          <strong>Fresh</strong>
-        </div>
-        <div class="hero-rail-item active"><Code2 size={16} /><span>All notes</span></div>
-        <div class="hero-rail-item"><Star size={16} /><span>Favorites</span></div>
-        <small>Tags</small>
-        <div class="hero-rail-tag"><i></i><span>ideas</span><b>8</b></div>
-        <div class="hero-rail-tag"><i></i><span>weekend</span><b>3</b></div>
-        <div class="hero-rail-user">
-          <span>F</span>
-          <div><strong>Fresh writer</strong><small>private notebook</small></div>
-        </div>
-      </aside>
-
+  <main id="landing-main">
+    <section class="hero page-width" aria-labelledby="landing-title">
       <div class="hero-copy">
-        <span class="hero-kicker"><ShieldCheck size={15} /> Private by design</span>
-        <h1 id="landing-title">Fresh</h1>
-        <p>A clear, cheerful notebook where Markdown becomes tidy notes, living checklists, and a home for every file worth keeping.</p>
+        <span class="little-label"><span class="status-dot"></span>Your own happy corner of the internet</span>
+        <h1 id="landing-title">
+          Fresh<span class="title-spark" aria-hidden="true"><Sparkles size={35} strokeWidth={1.6} /></span>
+        </h1>
+        <h2>Notes, lists<br />&amp; little plans.</h2>
+        <p>
+          Catch a thought. Make a list. Keep a little something for later. A private notebook that makes the everyday
+          feel a bit more you.
+        </p>
         <div class="hero-actions">
-          <a class="landing-primary" href={appHref}>{appLabel}<ArrowRight size={17} /></a>
-          <a class="landing-secondary" href="#features">See what fits inside</a>
+          <a class="clay-button" href={appHref}>{appLabel}<ArrowRight size={17} /></a><a
+            class="try-link"
+            href="#playground">Take it for a scribble <ArrowDown size={15} /></a
+          >
         </div>
-        <div class="hero-trust" aria-label="Fresh capabilities">
-          <span><Fingerprint size={15} /> Passkeys</span>
-          <span><LockKeyhole size={15} /> Encrypted backup</span>
-          <span><Cloud size={15} /> Your private cloud</span>
-        </div>
+        <span class="hero-footnote"><LockKeyhole size={13} /> Just for you. No public feed.</span>
       </div>
-
-      <div class="hero-notes" aria-hidden="true">
-        <article class="hero-note hero-note-main">
-          <header>
-            <span class="hero-note-accent"></span>
-            <div><strong>Slow Sunday</strong><small>Updated today</small></div>
-            <Star size={15} fill="currentColor" />
-          </header>
-          <div class="hero-note-body">
-            <p>A little room for the things that make the week feel lighter.</p>
-            <div class="fake-task"><span class="fake-check checked"><Check size={11} /></span> Pick up fresh flowers</div>
-            <div class="fake-task"><span class="fake-check"></span> Finish the window-seat chapter</div>
-            <div class="fake-task"><span class="fake-check"></span> Make lemon pasta</div>
+      <div class="desk-scene" aria-hidden="true">
+        <div class="notebook-spine"></div>
+        <div class="desk-caption"><span></span> A little peek at your notebook</div>
+        <article class="paper-note">
+          <div class="paper-top">
+            <span><FileText size={14} /> PERSONAL NOTE</span><Star size={17} fill="currentColor" />
           </div>
-          <footer><span>#weekend</span><span>#soft-plans</span></footer>
+          <h3>A nice little Saturday</h3>
+          <p>Less rushing.<br />More of the good stuff.</p>
+          <div class="paper-rule"></div>
+          <div class="paper-task done"><span><Check size={12} /></span> Coffee, just the way I like it</div>
+          <div class="paper-task"><span></span> A walk with no particular plan</div>
+          <div class="paper-task"><span></span> Finally start that little project</div>
+          <div class="paper-tags"><span>#weekend</span><span>#small-joys</span></div>
         </article>
-
-        <article class="hero-note hero-note-side">
-          <header>
-            <span class="hero-note-accent coral"></span>
-            <div><strong>Small ideas</strong><small>Yesterday</small></div>
-          </header>
-          <div class="hero-note-body">
-            <code>const room = 'for wonder';</code>
-            <div class="hero-image-placeholder"><Image size={18} /><span>cover-study.png</span></div>
+        <div class="mascot-sticker">
+          <img src="/icon-512x512.png" alt="" width="132" height="132" /><span>Hello, you!</span>
+        </div>
+        <article class="file-note">
+          <span class="file-picture"><Image size={27} strokeWidth={1.5} /></span>
+          <div><strong>A little inspiration</strong><span>keep-this-one.png</span></div>
+          <Paperclip size={16} />
+        </article>
+        <article class="board-note">
+          <header><LayoutDashboard size={15} /><strong>One thing at a time</strong><span>•••</span></header>
+          <div class="tiny-board">
+            <div><small><i></i> To do</small><span>A new idea</span><span>Make a start</span></div>
+            <div><small><i></i> Doing</small><span>Something good</span></div>
+            <div><small><i></i> Done</small><span><Check size={11} /> First step!</span></div>
           </div>
-          <footer><span>#ideas</span></footer>
         </article>
+        <div class="private-sticker"><Heart size={14} fill="currentColor" /> A space of your own</div>
       </div>
     </section>
 
-    <section id="features" class="landing-feature-band" aria-labelledby="features-title">
-      <div class="landing-section-inner">
-        <div class="section-heading">
-          <span>Everything in its place</span>
-          <h2 id="features-title">Write once. Keep it alive.</h2>
-          <p>Fresh keeps the structure of Markdown while giving every note the polish of a finished page.</p>
+    <section id="inside" class="inside-band" aria-labelledby="inside-title">
+      <div class="page-width">
+        <div class="section-intro">
+          <span class="little-label">Small details. Thoughtfully kept.</span>
+          <h2 id="inside-title">Everything you want to keep close.</h2>
         </div>
-
-        <div class="feature-grid">
+        <div class="feature-list">
           <article>
-            <span class="feature-icon blue"><Heading1 size={19} /></span>
-            <h3>Your first H1 is the title</h3>
-            <p>No separate title field. Start writing naturally and Fresh keeps the notebook organized for you.</p>
+            <span class="feature-symbol blue"><PenLine size={25} strokeWidth={1.7} /></span>
+            <div>
+              <h3>A note that feels like you</h3>
+              <p>
+                Write in Markdown. Add a #tag. Your words become tidy pages, with lovely type and checklists you can
+                actually tick.
+              </p>
+            </div>
           </article>
           <article>
-            <span class="feature-icon green"><ListChecks size={19} /></span>
-            <h3>Checklists stay live</h3>
-            <p>Tick a task in the finished note and the saved Markdown updates with it, including nested lists.</p>
+            <span class="feature-symbol mint"><LayoutDashboard size={25} strokeWidth={1.7} /></span>
+            <div>
+              <h3>Little plans, moving along</h3>
+              <p>
+                Give a project its own board. Move cards from “someday” to “all done,” one satisfying step at a time.
+              </p>
+            </div>
           </article>
           <article>
-            <span class="feature-icon coral"><Paperclip size={19} /></span>
-            <h3>Files belong with the thought</h3>
-            <p>Keep images, audio, video, PDFs, documents, and archives beside the note that gives them context.</p>
+            <span class="feature-symbol peach"><Paperclip size={25} strokeWidth={1.7} /></span>
+            <div>
+              <h3>The bits that go with it</h3>
+              <p>
+                A photo, a voice note, that very useful PDF. Keep your files with the thought that gives them meaning.
+              </p>
+            </div>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="landing-workflow" aria-labelledby="workflow-title">
-      <div class="landing-section-inner workflow-layout">
-        <div class="workflow-copy">
-          <span>Markdown, softened</span>
-          <h2 id="workflow-title">The speed of plain text, with a calmer finish.</h2>
-          <p>Write with familiar Markdown, preview rich typography, math, code, alerts, tags, and tables, then return to the source whenever you need it.</p>
-          <ul>
-            <li><Check size={15} /> KaTeX math and focused syntax highlighting</li>
-            <li><Check size={15} /> Fast filters for favorites, tags, and loaded notes</li>
-            <li><Check size={15} /> Responsive from a wide desk to a small phone</li>
-          </ul>
+    <section id="playground" class="playground page-width" aria-labelledby="playground-title">
+      <div class="playground-copy">
+        <span class="little-label"><PenLine size={15} /> A tiny playground</span>
+        <h2 id="playground-title">Go on.<br />Make a little mess.</h2>
+        <p>
+          This is the real editor. Change a sentence, tick a task, or add a file. See how it feels before making
+          yourself at home.
+        </p>
+        <ol class="demo-steps">
+          <li><span>1</span> Write a thought. Start with # for a title.</li>
+          <li><span>2</span> Preview it, then save your note.</li>
+          <li><span>3</span> Try a checkbox. Give it a little star.</li>
+        </ol>
+        <div class="demo-note">
+          <Heart size={16} />
+          <p>Just a practice page.<br /><strong>Your demo resets when you leave.</strong></p>
         </div>
-
+      </div>
+      <div class="playground-editor">
+        <div class="playground-tab"><span class="status-dot"></span> Your practice notebook</div>
         <LandingNoteDemo initialNote={data.landingDemoNote} />
       </div>
     </section>
 
-    <section id="security" class="landing-security" aria-labelledby="security-title">
-      <div class="landing-section-inner security-layout">
-        <div class="security-copy">
-          <span>Quiet security</span>
-          <h2 id="security-title">Your notes open for you, not a password.</h2>
-          <p>Sign in with a passkey protected by your device, then keep a password-encrypted Fresh backup wherever you trust.</p>
-          <div class="security-points">
-            <div><Fingerprint size={18} /><span><strong>Passkey sign-in</strong><small>Face ID, Touch ID, Windows Hello, or a security key</small></span></div>
-            <div><LockKeyhole size={18} /><span><strong>AES-256-GCM backups</strong><small>Encryption happens in your browser before download</small></span></div>
-            <div><ShieldCheck size={18} /><span><strong>Private attachments</strong><small>Every file request is checked against your account</small></span></div>
+    <section class="privacy-band" aria-labelledby="privacy-title">
+      <div class="privacy-layout page-width">
+        <div class="privacy-keepsake" aria-hidden="true">
+          <div class="keepsake-label"><LockKeyhole size={18} /><span>For your eyes only</span></div>
+          <div class="passkey-row">
+            <span><Fingerprint size={27} /></span>
+            <div><strong>A familiar hello</strong><small>Your device. Your passkey.</small></div>
+            <span class="keepsake-check"><Check size={16} /></span>
           </div>
+          <div class="backup-row">
+            <FileText size={23} />
+            <div><strong>My notebook.freshup</strong><small>A password-encrypted backup</small></div>
+            <LockKeyhole size={16} />
+          </div>
+          <p>Good thoughts, safely tucked away.</p>
         </div>
-
-        <div class="security-tool" aria-label="Passkey management preview">
-          <header><span><Fingerprint size={18} /> Passkeys</span><small>2 registered</small></header>
-          <div class="security-passkey active">
-            <span><KeyRound size={17} /></span>
-            <div><strong>MacBook Touch ID</strong><small>Synced passkey - Added today</small></div>
-            <i><Check size={13} /></i>
-          </div>
-          <div class="security-passkey">
-            <span><KeyRound size={17} /></span>
-            <div><strong>Travel security key</strong><small>Device passkey - Added Jul 12</small></div>
-            <i><Check size={13} /></i>
-          </div>
-          <div class="security-backup">
-            <span><LockKeyhole size={17} /></span>
-            <div><strong>fresh-2026-07-18.freshup</strong><small>Encrypted backup ready</small></div>
-          </div>
+        <div class="privacy-copy">
+          <span class="little-label">A little peace of mind</span>
+          <h2 id="privacy-title">Personal means<br />personal.</h2>
+          <p>
+            Your notebook belongs to your account. Every note and file stays behind sign-in, with no sharing links or
+            public feed.
+          </p>
+          <ul>
+            <li><Fingerprint size={18} /><span>Start with GitHub, then add a passkey for next time.</span></li>
+            <li>
+              <LockKeyhole size={18} /><span
+                >Download a backup encrypted in your browser. Keep it wherever you feel at home.</span
+              >
+            </li>
+          </ul>
         </div>
       </div>
     </section>
 
-    <section class="landing-closing" aria-labelledby="closing-title">
-      <div class="landing-section-inner closing-inner">
-        <div>
-          <span>A little room to think</span>
-          <h2 id="closing-title">Make something fresh.</h2>
-        </div>
-        <a class="landing-primary" href={appHref}>{appLabel}<ArrowRight size={17} /></a>
+    <section class="closing page-width" aria-labelledby="closing-title">
+      <div>
+        <span class="little-label">A fresh page is waiting</span>
+        <h2 id="closing-title">What’s on your mind?</h2>
       </div>
+      <a class="clay-button" href={appHref}>{appLabel}<ArrowRight size={17} /></a>
     </section>
   </main>
-
-  <footer class="landing-footer">
-    <div class="landing-section-inner">
-      <a class="landing-brand" href={resolve('/')} aria-label="Fresh home">
-        <span class="brand-mark" aria-hidden="true"><img src="/favicon-256x256.png" alt="" /></span>
-        <strong>Fresh</strong>
-      </a>
-      <p>Markdown, media, and private backups in one clear notebook.</p>
-      <a href="https://github.com/alkinum/fresh" target="_blank" rel="noreferrer"><GitHubIcon size={15} /> Apache-2.0</a>
-    </div>
+  <footer class="site-footer page-width">
+    <a class="wordmark" href={resolve('/')}
+      ><span class="brand-mark" aria-hidden="true"><img src="/favicon-256x256.png" alt="" /></span><strong>Fresh</strong
+      ></a
+    >
+    <p>For notes, lists, and the lovely in-between.</p>
+    <a class="source-link" href="https://github.com/alkinum/fresh" target="_blank" rel="noreferrer"
+      ><GitHubIcon size={16} /> Open source <span>↗</span></a
+    >
   </footer>
 </div>
 
 <style>
   .landing-page {
-    min-height: 100dvh;
-    overflow: hidden;
-    color: var(--text);
+    --mint: #deefe7;
+    --mint-ink: #326d57;
+    --peach: #fbe8df;
+    --peach-ink: #9a5946;
+    --paper: #fffefa;
+    --paper-line: #e9ece8;
     background: var(--bg);
+    color: var(--text);
+    overflow: clip;
   }
-
-  .landing-nav-shell {
-    position: relative;
-    z-index: 20;
-    border-bottom: 1px solid var(--border-soft);
-    background: var(--glass-panel-strong);
-    backdrop-filter: blur(18px) saturate(135%);
+  .page-width {
+    width: min(1160px, calc(100% - 64px));
+    margin-inline: auto;
   }
-
-  .landing-nav,
-  .landing-section-inner {
-    width: min(1180px, calc(100% - 40px));
-    margin: 0 auto;
-  }
-
-  .landing-nav {
-    min-height: 72px;
+  .site-header {
+    min-height: 96px;
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
     gap: 24px;
   }
-
-  .landing-brand {
+  .wordmark {
     display: inline-flex;
     align-items: center;
-    gap: 11px;
-    color: var(--text);
+    gap: 12px;
     text-decoration: none;
+    color: var(--text);
   }
-
-  .landing-brand strong {
-    font-size: 16px;
+  .wordmark strong {
+    font-size: 22px;
+    font-weight: 750;
   }
-
-  .landing-nav-links {
+  .site-header nav {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 30px;
   }
-
-  .landing-nav-links > a:not(.landing-nav-action) {
+  .text-link,
+  .source-link {
     color: var(--muted);
     font-size: 13px;
-    font-weight: 650;
+    font-weight: 600;
     text-decoration: none;
   }
-
-  .landing-nav-links > a:not(.landing-nav-action):hover {
-    color: var(--text);
+  .text-link:hover,
+  .source-link:hover {
+    color: var(--primary-hover);
   }
-
-  .landing-nav-action,
-  .landing-primary,
-  .landing-secondary {
-    min-height: 38px;
+  .header-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 13px;
+    min-height: 43px;
+    padding: 10px 18px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: var(--surface);
+    color: var(--text-strong);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 3px 0 var(--border-soft);
+  }
+  .hero {
+    display: grid;
+    grid-template-columns: 0.88fr 1.12fr;
+    align-items: center;
+    gap: 35px;
+    min-height: 630px;
+    padding-block: 24px 68px;
+  }
+  .little-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.6;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    flex: 0 0 auto;
+  }
+  .hero h1 {
+    position: relative;
+    display: inline-block;
+    margin: 18px 0 12px;
+    font-size: clamp(86px, 8.6vw, 126px);
+    line-height: 1;
+    font-weight: 800;
+    color: var(--primary-hover);
+  }
+  .title-spark {
+    position: absolute;
+    top: 4px;
+    right: -43px;
+    transform: rotate(12deg);
+    color: var(--primary);
+  }
+  .hero h2 {
+    margin: 0;
+    font-size: clamp(29px, 3vw, 40px);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .hero-copy > p {
+    max-width: 370px;
+    margin: 20px 0 24px;
+    color: var(--text-body);
+    font-size: 15px;
+    line-height: 1.85;
+  }
+  .hero-actions {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .clay-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    border-radius: var(--radius-control);
-    font-size: 13px;
-    font-weight: 720;
-    text-decoration: none;
-    transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
-  }
-
-  .landing-nav-action {
-    padding: 8px 13px;
-    color: var(--primary-on);
-    background: var(--primary);
-    box-shadow: 0 8px 20px var(--primary-ring);
-  }
-
-  .landing-hero {
-    position: relative;
-    min-height: clamp(540px, calc(100svh - 220px), 790px);
-    overflow: hidden;
-    border-bottom: 1px solid var(--border-soft);
-    background: var(--workspace-start);
-  }
-
-  .hero-canvas {
-    position: absolute;
-    inset: 28px -60px 28px max(270px, calc((100vw - 1180px) / 2 + 248px));
-    overflow: hidden;
-    border-radius: 24px 0 0 24px;
-    background: var(--surface-editor);
-    box-shadow: var(--shadow-lg);
-  }
-
-  .hero-toolbar {
-    min-height: 50px;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 8px 14px;
-    background: var(--surface-toolbar);
-  }
-
-  .hero-toolbar > span {
-    width: 31px;
-    height: 31px;
-    display: grid;
-    place-items: center;
-    border-radius: var(--radius-icon);
-    color: var(--muted);
-  }
-
-  .hero-toolbar > span:last-of-type {
-    color: var(--primary-hover);
-    background: var(--primary-soft);
-  }
-
-  .hero-mode {
-    margin-left: auto;
-    display: flex;
-    gap: 2px;
-    padding: 3px;
-    border-radius: var(--radius-control);
-    background: var(--surface-subtle);
-    color: var(--muted);
-    font-size: 10px;
-  }
-
-  .hero-mode span {
-    padding: 6px 9px;
-    border-radius: var(--radius-icon);
-  }
-
-  .hero-mode span:first-child {
-    color: var(--text);
-    background: var(--surface-raised);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .hero-writing-line {
-    width: 34%;
-    height: 8px;
-    margin: 84px 0 0 70px;
-    border-radius: 5px;
-    background: var(--surface-subtle);
-  }
-
-  .hero-writing-line.short {
-    width: 23%;
-    margin-top: 14px;
-  }
-
-  .hero-rail {
-    position: absolute;
-    inset: 18px auto 18px max(20px, calc((100vw - 1180px) / 2));
-    z-index: 4;
-    width: 238px;
-    display: flex;
-    flex-direction: column;
-    padding: 16px 12px 12px;
-    border-radius: var(--radius-shell);
-    background: var(--sidebar);
-    box-shadow: var(--shadow);
-  }
-
-  .hero-rail-brand {
-    min-height: 50px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0 8px 12px;
-  }
-
-  .hero-rail-brand .brand-mark {
-    width: 32px;
-    height: 32px;
-  }
-
-  .hero-rail-item,
-  .hero-rail-tag {
-    min-height: 39px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: var(--radius-control);
-    color: var(--muted);
-    font-size: 12px;
-  }
-
-  .hero-rail-item.active {
-    color: var(--primary-hover);
-    border: 1px solid var(--nav-active-border);
-    background: var(--nav-active-bg);
-    box-shadow: inset 0 1px 0 var(--glass-highlight), 0 8px 20px var(--nav-active-shadow);
-  }
-
-  .hero-rail > small {
-    margin: 22px 10px 7px;
-    color: var(--faint);
-    font-size: 9px;
-    font-weight: 750;
-    text-transform: uppercase;
-  }
-
-  .hero-rail-tag i {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #79a9f3;
-  }
-
-  .hero-rail-tag:nth-of-type(4) i {
-    background: #67be9a;
-  }
-
-  .hero-rail-tag span {
-    flex: 1;
-  }
-
-  .hero-rail-tag b {
-    color: var(--faint);
-    font-size: 10px;
-  }
-
-  .hero-rail-user {
-    min-height: 52px;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    margin-top: auto;
-    padding: 8px;
-    border-radius: var(--radius-control);
-    background: var(--glass-control);
-    box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-sm);
-  }
-
-  .hero-rail-user > span {
-    width: 30px;
-    height: 30px;
-    display: grid;
-    place-items: center;
-    border-radius: var(--radius-icon);
-    color: var(--primary-on);
-    background: var(--primary);
-    font-size: 11px;
-    font-weight: 750;
-  }
-
-  .hero-rail-user div {
-    min-width: 0;
-    display: grid;
-    gap: 2px;
-  }
-
-  .hero-rail-user strong {
-    font-size: 10px;
-  }
-
-  .hero-rail-user small {
-    color: var(--faint);
-    font-size: 8px;
-  }
-
-  .hero-copy {
-    position: relative;
-    z-index: 5;
-    width: min(540px, calc(100% - 340px));
-    margin-left: max(330px, calc((100vw - 1180px) / 2 + 310px));
-    padding-top: clamp(86px, 13vh, 138px);
-  }
-
-  .hero-kicker,
-  .section-heading > span,
-  .workflow-copy > span,
-  .security-copy > span,
-  .closing-inner > div > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    color: var(--primary-hover);
-    font-size: 11px;
-    font-weight: 750;
-    text-transform: uppercase;
-  }
-
-  .hero-copy h1 {
-    margin: 17px 0 10px;
-    color: var(--text);
-    font-size: clamp(58px, 7vw, 92px);
-    font-weight: 760;
-    line-height: 0.92;
-  }
-
-  .hero-copy > p {
-    max-width: 520px;
-    margin: 0;
-    color: var(--text-body);
-    font-size: clamp(16px, 1.55vw, 20px);
-    line-height: 1.58;
-  }
-
-  .hero-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 25px;
-  }
-
-  .landing-primary {
-    min-height: 44px;
-    padding: 10px 16px;
-    color: var(--primary-on);
-    background: var(--primary);
-    box-shadow: 0 12px 28px var(--primary-ring);
-  }
-
-  .landing-primary:hover,
-  .landing-nav-action:hover {
-    transform: translateY(-1px);
-    background: var(--primary-hover);
-    box-shadow: 0 16px 34px var(--primary-ring);
-  }
-
-  .landing-secondary {
-    min-height: 44px;
-    padding: 10px 14px;
-    color: var(--muted);
-  }
-
-  .landing-secondary:hover {
-    color: var(--text);
-    background: var(--surface-hover);
-  }
-
-  .hero-trust {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-top: 21px;
-    color: var(--muted);
-    font-size: 10px;
-    font-weight: 650;
-  }
-
-  .hero-trust span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .hero-trust :global(svg) {
-    color: var(--primary-hover);
-  }
-
-  .hero-notes {
-    position: absolute;
-    right: max(20px, calc((100vw - 1180px) / 2));
-    bottom: 44px;
-    z-index: 6;
-    width: min(550px, 45vw);
-    display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(190px, 0.75fr);
-    align-items: end;
-    gap: 12px;
-  }
-
-  .hero-note {
-    overflow: hidden;
-    border-radius: var(--radius-panel);
-    background: var(--surface);
-    box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow);
-  }
-
-  .hero-note > header {
-    min-height: 55px;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 11px 12px;
-  }
-
-  .hero-note > header > div {
-    min-width: 0;
-    flex: 1;
-    display: grid;
-    gap: 2px;
-  }
-
-  .hero-note > header strong {
-    font-size: 12px;
-  }
-
-  .hero-note > header small {
-    color: var(--faint);
-    font-size: 8px;
-  }
-
-  .hero-note > header > :global(svg) {
-    color: #f7c94e;
-  }
-
-  .hero-note-accent {
-    width: 4px;
-    height: 32px;
-    border-radius: 3px;
-    background: #67be9a;
-  }
-
-  .hero-note-accent.coral {
-    background: #ee7e88;
-  }
-
-  .hero-note-body {
-    padding: 0 14px 12px;
-    color: var(--text-body);
-    font-size: 10px;
-    line-height: 1.55;
-  }
-
-  .hero-note-body p {
-    margin: 0 0 10px;
-  }
-
-  .fake-task {
-    min-height: 24px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .fake-check {
-    width: 16px;
-    height: 16px;
-    flex: 0 0 auto;
-    display: grid;
-    place-items: center;
-    border: 1.5px solid var(--task-border);
-    border-radius: 5px;
-    background: var(--task-bg);
-  }
-
-  .fake-check.checked {
-    border-color: var(--primary);
-    color: var(--primary-on);
-    background: var(--primary);
-  }
-
-  .hero-note footer {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    padding: 9px 13px 11px;
-  }
-
-  .hero-note footer span {
-    padding: 3px 7px;
-    border-radius: 999px;
-    color: var(--primary-hover);
-    background: var(--primary-soft);
-    font-size: 8px;
-  }
-
-  .hero-note-side {
-    transform: translateY(18px);
-  }
-
-  .hero-note-side code {
-    display: block;
-    padding: 8px;
-    border-radius: var(--radius-icon);
-    color: var(--code-text);
-    background: var(--code-bg);
-    font-size: 8px;
-  }
-
-  .hero-image-placeholder {
-    min-height: 58px;
-    display: grid;
-    place-items: center;
-    gap: 3px;
-    margin-top: 8px;
-    border-radius: var(--radius-icon);
-    color: var(--muted);
-    background: var(--surface-media);
-    font-size: 8px;
-  }
-
-  .landing-feature-band,
-  .landing-security {
-    border-bottom: 1px solid var(--border-soft);
-    background: var(--surface);
-  }
-
-  .landing-feature-band,
-  .landing-workflow,
-  .landing-security {
-    padding: 92px 0;
-  }
-
-  .section-heading {
-    max-width: 650px;
-  }
-
-  .section-heading h2,
-  .workflow-copy h2,
-  .security-copy h2,
-  .closing-inner h2 {
-    margin: 12px 0 10px;
-    font-size: clamp(30px, 4vw, 48px);
-    line-height: 1.08;
-  }
-
-  .section-heading p,
-  .workflow-copy > p,
-  .security-copy > p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 15px;
-    line-height: 1.7;
-  }
-
-  .feature-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 42px;
-    margin-top: 55px;
-  }
-
-  .feature-grid article {
-    min-width: 0;
-  }
-
-  .feature-icon {
-    width: 42px;
-    height: 42px;
-    display: grid;
-    place-items: center;
-    border-radius: var(--radius-control);
-  }
-
-  .feature-icon.blue {
-    color: var(--primary-hover);
-    background: var(--primary-soft);
-  }
-
-  .feature-icon.green {
-    color: var(--success);
-    background: var(--success-soft);
-  }
-
-  .feature-icon.coral {
-    color: var(--danger);
-    background: var(--danger-soft);
-  }
-
-  .feature-grid h3 {
-    margin: 17px 0 8px;
-    font-size: 16px;
-  }
-
-  .feature-grid p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 13px;
-    line-height: 1.7;
-  }
-
-  .landing-workflow {
-    border-bottom: 1px solid var(--border-soft);
-    background: var(--workspace-start);
-  }
-
-  .workflow-layout,
-  .security-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 0.8fr) minmax(520px, 1.2fr);
-    align-items: center;
-    gap: 70px;
-  }
-
-  .workflow-copy ul {
-    display: grid;
-    gap: 12px;
-    margin: 25px 0 0;
-    padding: 0;
-    color: var(--text-body);
-    font-size: 12px;
-    list-style: none;
-  }
-
-  .workflow-copy li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .workflow-copy li :global(svg) {
-    color: var(--success);
-  }
-
-  .security-tool {
-    overflow: hidden;
-    border-radius: var(--radius-dialog);
-    background: var(--surface);
-    box-shadow: var(--shadow-lg);
-  }
-
-  .security-tool > header {
-    min-height: 52px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 14px;
-    background: var(--surface-toolbar);
-  }
-
-  .security-tool > header > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 12px;
-    font-weight: 720;
-  }
-
-  .security-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(420px, 0.85fr);
-  }
-
-  .security-points {
-    display: grid;
+    min-height: 48px;
     gap: 18px;
-    margin-top: 28px;
-  }
-
-  .security-points > div {
-    display: flex;
-    align-items: flex-start;
-    gap: 11px;
-  }
-
-  .security-points > div > :global(svg) {
-    flex: 0 0 auto;
-    margin-top: 2px;
-    color: var(--primary-hover);
-  }
-
-  .security-points span {
-    display: grid;
-    gap: 3px;
-  }
-
-  .security-points strong {
+    padding: 12px 21px;
+    color: var(--primary-on);
+    background: var(--action);
+    border: 1px solid var(--primary-ring);
+    border-radius: 16px;
+    box-shadow:
+      0 4px 0 color-mix(in srgb, var(--action), var(--text) 22%),
+      inset 0 1px 0 var(--glass-highlight-soft),
+      0 10px 22px var(--primary-ring);
+    font-weight: 700;
     font-size: 13px;
+    text-decoration: none;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease;
   }
-
-  .security-points small {
-    color: var(--muted);
-    font-size: 11px;
-    line-height: 1.5;
+  .clay-button:hover {
+    transform: translateY(-2px);
   }
-
-  .security-tool {
-    padding-bottom: 12px;
+  .clay-button:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--primary-hover);
   }
-
-  .security-tool > header small {
-    color: var(--faint);
-    font-size: 10px;
-  }
-
-  .security-passkey,
-  .security-backup {
-    min-height: 66px;
-    display: flex;
+  .try-link {
+    display: inline-flex;
     align-items: center;
-    gap: 11px;
-    margin: 10px 12px 0;
-    padding: 10px 11px;
-    border-radius: var(--radius-control);
-    background: var(--surface-raised);
+    gap: 7px;
+    color: var(--text-body);
+    font-size: 12px;
+    font-weight: 600;
+    text-underline-offset: 5px;
+    text-decoration-color: var(--border);
   }
-
-  .security-passkey.active {
-    border: 1px solid var(--nav-active-border);
-    background: var(--nav-active-bg);
-    box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-sm);
-  }
-
-  .security-passkey > span,
-  .security-backup > span {
-    width: 36px;
-    height: 36px;
-    flex: 0 0 auto;
-    display: grid;
-    place-items: center;
-    border-radius: var(--radius-control);
-    color: var(--primary-hover);
-    background: var(--primary-soft);
-  }
-
-  .security-passkey > div,
-  .security-backup > div {
-    min-width: 0;
-    flex: 1;
-    display: grid;
-    gap: 3px;
-  }
-
-  .security-passkey strong,
-  .security-backup strong {
-    overflow: hidden;
-    font-size: 11px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .security-passkey small,
-  .security-backup small {
-    color: var(--muted);
-    font-size: 9px;
-  }
-
-  .security-passkey i {
-    width: 24px;
-    height: 24px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    color: var(--success-text);
-    background: var(--success-soft);
-  }
-
-  .security-backup {
-    border-top: 1px solid var(--border-soft);
-    background: transparent;
-  }
-
-  .landing-closing {
-    padding: 72px 0;
-    background: var(--workspace-start);
-  }
-
-  .closing-inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 28px;
-  }
-
-  .closing-inner h2 {
-    margin-bottom: 0;
-  }
-
-  .landing-footer {
-    border-top: 1px solid var(--border-soft);
-    background: var(--sidebar);
-  }
-
-  .landing-footer .landing-section-inner {
-    min-height: 92px;
-    display: flex;
-    align-items: center;
-    gap: 26px;
-  }
-
-  .landing-footer .brand-mark {
-    width: 30px;
-    height: 30px;
-  }
-
-  .landing-footer p {
-    flex: 1;
-    color: var(--muted);
-    font-size: 11px;
-  }
-
-  .landing-footer > div > a:last-child {
+  .hero-footnote {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    margin-top: 28px;
     color: var(--muted);
     font-size: 11px;
+  }
+  .desk-scene {
+    position: relative;
+    min-width: 0;
+    height: 535px;
+  }
+  .desk-caption {
+    position: absolute;
+    top: 0;
+    left: 47px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--muted);
+    font-size: 11px;
+    transform: rotate(-3deg);
+  }
+  .desk-caption > span {
+    width: 32px;
+    height: 1px;
+    background: var(--border);
+  }
+  .notebook-spine {
+    position: absolute;
+    inset: 50px 36px 31px 24px;
+    background: var(--primary-soft);
+    border: 1px solid var(--primary-ring);
+    border-radius: 29px;
+    transform: rotate(-5deg);
+    box-shadow: inset 0 2px 0 var(--glass-highlight);
+  }
+  .paper-note {
+    position: absolute;
+    top: 54px;
+    left: 0;
+    width: 83%;
+    padding: 25px 25px 22px;
+    border: 1px solid var(--border-soft);
+    border-radius: 19px;
+    background: var(--paper);
+    transform: rotate(-4deg);
+    box-shadow:
+      0 5px 0 var(--surface-raised),
+      0 7px 0 var(--border-soft),
+      0 20px 40px var(--primary-ring);
+  }
+  .paper-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .paper-top > span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 9px;
     font-weight: 700;
-    text-decoration: none;
+  }
+  .paper-top > :global(svg) {
+    color: #c88916;
+  }
+  .paper-note h3 {
+    margin: 0 0 12px;
+    font-size: 22px;
+    line-height: 1.25;
+  }
+  .paper-note > p {
+    margin: 0;
+    color: var(--text-body);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .paper-rule {
+    height: 1px;
+    margin: 18px 0;
+    background: var(--paper-line);
+  }
+  .paper-task {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 12px;
+    color: var(--text-body);
+    font-size: 11px;
+  }
+  .paper-task > span {
+    width: 17px;
+    height: 17px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border: 1px solid var(--task-border);
+    border-radius: 6px;
+  }
+  .paper-task.done {
+    color: var(--muted);
+  }
+  .paper-task.done > span {
+    background: var(--action);
+    border-color: var(--action);
+    color: var(--primary-on);
+  }
+  .paper-tags {
+    display: flex;
+    gap: 7px;
+    margin-top: 22px;
+  }
+  .paper-tags > span {
+    padding: 5px 8px;
+    border-radius: 8px;
+    color: var(--mint-ink);
+    background: var(--mint);
+    font-size: 10px;
+  }
+  .mascot-sticker {
+    position: absolute;
+    top: 0;
+    right: 1px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: rotate(9deg);
+  }
+  .mascot-sticker img {
+    width: 128px;
+    height: 128px;
+    border: 5px solid var(--surface);
+    border-radius: 35px;
+    box-shadow:
+      0 6px 0 var(--border-soft),
+      var(--shadow);
+  }
+  .mascot-sticker > span {
+    margin-top: 9px;
+    padding: 5px 11px;
+    border: 1px solid var(--border-soft);
+    border-radius: 12px 12px 12px 3px;
+    background: var(--surface);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .file-note {
+    position: absolute;
+    z-index: 2;
+    right: -5px;
+    top: 279px;
+    width: 262px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: 15px;
+    background: var(--paper);
+    box-shadow:
+      0 3px 0 var(--border-soft),
+      var(--shadow-sm);
+    transform: rotate(6deg);
+  }
+  .file-picture {
+    display: grid;
+    place-items: center;
+    width: 47px;
+    height: 48px;
+    border-radius: 10px;
+    background: var(--peach);
+    color: var(--peach-ink);
+  }
+  .file-note > div {
+    display: grid;
+    gap: 5px;
+  }
+  .file-note strong {
+    font-size: 11px;
+  }
+  .file-note div > span {
+    color: var(--muted);
+    font-size: 9px;
+  }
+  .file-note > :global(svg) {
+    margin-left: auto;
+    color: var(--muted);
+  }
+  .board-note {
+    position: absolute;
+    z-index: 3;
+    bottom: 0;
+    right: 8px;
+    width: 86%;
+    padding: 16px;
+    border: 1px solid var(--border-soft);
+    border-radius: 19px;
+    background: var(--surface);
+    box-shadow:
+      0 4px 0 var(--border-soft),
+      var(--shadow);
+    transform: rotate(2deg);
+  }
+  .board-note header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    color: var(--text-body);
+  }
+  .board-note header strong {
+    font-size: 12px;
+  }
+  .board-note header > span {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .tiny-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .tiny-board > div {
+    min-height: 95px;
+    padding: 8px;
+    border-radius: 10px;
+    background: var(--surface-subtle);
+  }
+  .tiny-board small {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 9px;
+    font-size: 9px;
+    font-weight: 650;
+  }
+  .tiny-board i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--primary);
+  }
+  .tiny-board > div:nth-child(2) i {
+    background: #d39e52;
+  }
+  .tiny-board > div:nth-child(3) i {
+    background: var(--success);
+  }
+  .tiny-board div > span {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    margin-top: 5px;
+    padding: 7px 5px;
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-body);
+    box-shadow: 0 1px 1px var(--border-soft);
+    font-size: 8px;
+  }
+  .private-sticker {
+    position: absolute;
+    bottom: -34px;
+    right: 28px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--mint-ink);
+    font-size: 11px;
+    transform: rotate(-3deg);
+  }
+  .inside-band {
+    border-block: 1px solid var(--border-soft);
+    background: var(--surface);
+    padding: 49px 0 52px;
+  }
+  .section-intro h2 {
+    margin: 8px 0 30px;
+    font-size: 27px;
+    line-height: 1.3;
+  }
+  .feature-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 34px;
+  }
+  .feature-list article {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  .feature-symbol {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 54px;
+    flex: 0 0 auto;
+    border-radius: 18px 18px 18px 8px;
+    box-shadow:
+      inset 0 2px 0 var(--glass-highlight),
+      0 3px 0 var(--border-soft);
+  }
+  .blue {
+    background: var(--primary-soft);
+    color: var(--primary-hover);
+  }
+  .mint {
+    background: var(--mint);
+    color: var(--mint-ink);
+  }
+  .peach {
+    background: var(--peach);
+    color: var(--peach-ink);
+  }
+  .feature-list h3 {
+    margin: 1px 0 9px;
+    font-size: 14px;
+  }
+  .feature-list p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.85;
+  }
+  .playground {
+    display: grid;
+    grid-template-columns: 0.75fr 1.25fr;
+    gap: 80px;
+    padding-block: 100px;
+    align-items: start;
+    scroll-margin-top: 30px;
+  }
+  .playground-copy {
+    padding-top: 37px;
+  }
+  .playground-copy h2,
+  .privacy-copy h2 {
+    margin: 16px 0 22px;
+    font-size: 39px;
+    line-height: 1.22;
+  }
+  .playground-copy > p,
+  .privacy-copy > p {
+    color: var(--text-body);
+    font-size: 14px;
+    line-height: 1.85;
+  }
+  .demo-steps {
+    display: grid;
+    gap: 16px;
+    margin: 28px 0;
+    padding: 0;
+    list-style: none;
+  }
+  .demo-steps li {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    color: var(--text-body);
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .demo-steps li > span {
+    display: grid;
+    place-items: center;
+    width: 23px;
+    height: 25px;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--primary-hover);
+    border: 1px solid var(--border-soft);
+    font-weight: 700;
+  }
+  .demo-note {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    color: var(--mint-ink);
+  }
+  .demo-note p {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.8;
+  }
+  .demo-note strong {
+    font-weight: 500;
+  }
+  .playground-editor {
+    min-width: 0;
+  }
+  .playground-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 18px;
+    padding: 10px 18px;
+    border-radius: 14px 14px 0 0;
+    background: var(--primary-soft);
+    color: var(--text-body);
+    font-size: 11px;
+    font-weight: 650;
+  }
+  .privacy-band {
+    padding-block: 67px;
+    border-block: 1px solid var(--border-soft);
+    background: var(--surface);
+  }
+  .privacy-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 100px;
+  }
+  .privacy-keepsake {
+    position: relative;
+    margin: 12px;
+    padding: 25px;
+    border: 1px solid var(--border-soft);
+    border-radius: 25px;
+    background: var(--bg);
+    box-shadow:
+      0 6px 0 var(--border-soft),
+      var(--shadow-sm);
+    transform: rotate(-2deg);
+  }
+  .keepsake-label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 22px;
+    color: var(--text-body);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .passkey-row,
+  .backup-row {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 16px;
+    border-radius: 15px;
+    background: var(--surface);
+  }
+  .passkey-row > span:first-child {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+    color: var(--primary-hover);
+    background: var(--primary-soft);
+  }
+  .passkey-row > div,
+  .backup-row > div {
+    display: grid;
+    flex: 1;
+    gap: 5px;
+  }
+  .passkey-row strong,
+  .backup-row strong {
+    font-size: 12px;
+  }
+  .passkey-row small,
+  .backup-row small {
+    color: var(--muted);
+    font-size: 10px;
+  }
+  .keepsake-check {
+    color: var(--success-text);
+  }
+  .backup-row {
+    margin-top: 12px;
+    color: var(--text-body);
+    background: var(--mint);
+  }
+  .privacy-keepsake > p {
+    margin: 18px 0 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .privacy-copy ul {
+    display: grid;
+    gap: 18px;
+    margin: 25px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .privacy-copy li {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    color: var(--text-body);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .privacy-copy li > :global(svg) {
+    flex: 0 0 auto;
+    color: var(--primary-hover);
+    margin-top: 2px;
+  }
+  .closing {
+    display: flex;
+    justify-content: space-between;
+    gap: 25px;
+    align-items: center;
+    padding-block: 75px;
+  }
+  .closing h2 {
+    margin: 10px 0 0;
+    font-size: 35px;
+  }
+  .site-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    min-height: 110px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .site-footer .wordmark strong {
+    font-size: 17px;
+  }
+  .site-footer .brand-mark {
+    width: 30px;
+    height: 30px;
+  }
+  .site-footer p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .source-link {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
   }
 
-  @media (max-width: 980px) {
-    .hero-copy {
-      width: min(520px, calc(100% - 300px));
-      margin-left: 292px;
+  @media (prefers-color-scheme: dark) {
+    .landing-page {
+      --mint: #203d37;
+      --mint-ink: #9bd7b9;
+      --peach: #443238;
+      --peach-ink: #efb9a4;
+      --paper: #19293a;
+      --paper-line: #304254;
     }
-
-    .hero-notes {
-      width: 48vw;
-      grid-template-columns: 1fr;
+    .hero h1 {
+      color: #a8c7ff;
     }
-
-    .hero-note-side {
-      display: none;
-    }
-
-    .workflow-layout,
-    .security-layout {
-      grid-template-columns: 1fr;
-      gap: 46px;
-    }
-
-    .workflow-copy,
-    .security-copy {
-      max-width: 680px;
+    .paper-top > :global(svg) {
+      color: #f0c16b;
     }
   }
-
-  @media (max-width: 780px) {
-    .landing-nav,
-    .landing-section-inner {
-      width: min(100% - 24px, 680px);
+  @media (max-width: 1000px) {
+    .hero {
+      gap: 20px;
+      grid-template-columns: 0.85fr 1.15fr;
     }
-
-    .landing-nav {
-      min-height: 62px;
-    }
-
-    .landing-nav-links {
-      gap: 8px;
-    }
-
-    .landing-nav-links > a:not(.landing-nav-action) {
-      display: none;
-    }
-
-    .landing-hero {
-      min-height: clamp(500px, calc(100svh - 170px), 650px);
-    }
-
-    .hero-rail {
-      display: none;
-    }
-
-    .hero-canvas {
-      inset: 330px -90px 18px 12px;
-      border-radius: var(--radius-shell) 0 0 var(--radius-shell);
-    }
-
-    .hero-toolbar {
-      padding-left: 12px;
-    }
-
-    .hero-toolbar > span:nth-child(n + 5) {
-      display: none;
-    }
-
-    .hero-mode {
-      margin-right: 72px;
-    }
-
-    .hero-writing-line {
-      display: none;
-    }
-
-    .hero-copy {
-      width: calc(100% - 40px);
-      margin-left: 20px;
-      padding-top: 35px;
-    }
-
-    .hero-copy h1 {
-      margin-top: 12px;
-      font-size: clamp(50px, 18vw, 72px);
-    }
-
     .hero-copy > p {
-      max-width: 530px;
-      font-size: 15px;
-      line-height: 1.48;
-    }
-
-    .hero-actions {
-      margin-top: 18px;
-    }
-
-    .hero-trust {
-      display: none;
-    }
-
-    .hero-notes {
-      right: 12px;
-      bottom: 27px;
-      width: min(330px, calc(100% - 42px));
-      grid-template-columns: 1fr;
-    }
-
-    .hero-note-main {
-      transform: rotate(-1.2deg);
-    }
-
-    .hero-note-body p {
-      display: none;
-    }
-
-    .hero-note-body .fake-task {
-      min-height: 22px;
-    }
-
-    .landing-feature-band,
-    .landing-workflow,
-    .landing-security {
-      padding: 66px 0;
-    }
-
-    .feature-grid {
-      grid-template-columns: 1fr;
-      gap: 34px;
-      margin-top: 40px;
-    }
-
-    .feature-grid article {
-      display: grid;
-      grid-template-columns: 42px minmax(0, 1fr);
-      column-gap: 14px;
-    }
-
-    .feature-grid h3 {
-      margin: 2px 0 6px;
-    }
-
-    .feature-grid p {
-      grid-column: 2;
-    }
-
-    .landing-closing {
-      padding: 56px 0;
-    }
-
-    .closing-inner {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-
-    .landing-footer .landing-section-inner {
-      min-height: 118px;
-      flex-wrap: wrap;
-      gap: 12px 20px;
-      padding-block: 18px;
-    }
-
-    .landing-footer p {
-      flex-basis: 100%;
-      order: 3;
-      margin: 0;
-    }
-
-    .landing-footer > div > a:last-child {
-      margin-left: auto;
-    }
-  }
-
-  @media (max-width: 430px) {
-    .landing-nav-action span {
-      display: none;
-    }
-
-    .landing-nav-action {
-      width: 38px;
-      padding: 0;
-    }
-
-    .hero-copy {
-      width: calc(100% - 28px);
-      margin-left: 14px;
-      padding-top: 26px;
-    }
-
-    .hero-copy > p {
-      max-width: 350px;
       font-size: 14px;
     }
-
+    .desk-scene {
+      height: 505px;
+    }
+    .paper-note {
+      padding: 24px 18px;
+      width: 91%;
+    }
+    .paper-note h3 {
+      max-width: 220px;
+      font-size: 20px;
+    }
+    .mascot-sticker {
+      right: -6px;
+      top: 7px;
+    }
+    .mascot-sticker img {
+      width: 94px;
+      height: 94px;
+      border-radius: 28px;
+    }
+    .file-note {
+      top: 289px;
+      width: 225px;
+    }
+    .board-note {
+      width: 94%;
+    }
+    .feature-list {
+      gap: 22px;
+    }
+    .feature-list article {
+      flex-direction: column;
+    }
+    .playground {
+      gap: 36px;
+      grid-template-columns: 0.7fr 1.3fr;
+    }
+    .privacy-layout {
+      gap: 50px;
+    }
+  }
+  @media (max-width: 760px) {
+    .page-width {
+      width: calc(100% - 40px);
+    }
+    .site-header {
+      min-height: 78px;
+    }
+    .site-header nav {
+      gap: 18px;
+    }
+    .site-header .text-link:first-child {
+      display: none;
+    }
+    .wordmark strong {
+      font-size: 20px;
+    }
+    .hero {
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding-block: 26px 66px;
+    }
+    .hero-copy {
+      max-width: 520px;
+      text-align: center;
+      margin-inline: auto;
+    }
+    .hero h1 {
+      margin-block: 11px;
+      font-size: 94px;
+    }
+    .hero h2 {
+      font-size: 29px;
+    }
+    .hero h2 br {
+      display: none;
+    }
+    .hero-copy > p {
+      max-width: 395px;
+      margin: 16px auto 22px;
+    }
     .hero-actions {
-      gap: 5px;
+      align-items: center;
+      gap: 19px;
     }
-
-    .landing-primary,
-    .landing-secondary {
+    .hero-footnote {
+      margin-top: 18px;
+    }
+    .desk-scene {
+      width: min(480px, 100%);
+      height: 477px;
+      margin-inline: auto;
+    }
+    .paper-note {
+      width: 83%;
+      padding: 22px;
+    }
+    .desk-caption {
+      left: 15px;
+    }
+    .paper-task {
+      font-size: 10px;
+    }
+    .paper-tags {
+      margin-top: 17px;
+    }
+    .file-note {
+      top: 265px;
+      right: 0;
+    }
+    .board-note {
+      width: 88%;
+      right: 0;
+    }
+    .mascot-sticker {
+      right: 0;
+    }
+    .feature-list {
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+    .feature-list article {
+      flex-direction: row;
+      gap: 19px;
+    }
+    .feature-list p {
+      max-width: 440px;
+    }
+    .section-intro h2 {
+      font-size: 25px;
+    }
+    .inside-band {
+      padding-block: 40px;
+    }
+    .playground {
+      grid-template-columns: 1fr;
+      padding-block: 55px;
+      gap: 30px;
+    }
+    .playground-copy {
+      padding-top: 0;
+    }
+    .playground-copy h2,
+    .privacy-copy h2 {
+      font-size: 32px;
+    }
+    .playground-copy h2 br {
+      display: none;
+    }
+    .demo-steps {
+      gap: 10px;
+      margin-block: 20px;
+    }
+    .privacy-layout {
+      grid-template-columns: 1fr;
+      gap: 34px;
+    }
+    .privacy-copy {
+      grid-row: 1;
+    }
+    .privacy-band {
+      padding-block: 45px;
+    }
+    .privacy-keepsake {
+      max-width: 430px;
+      margin-inline: auto;
+      width: calc(100% - 20px);
+    }
+    .closing {
+      flex-direction: column;
+      text-align: center;
+      padding-block: 55px;
+      gap: 27px;
+    }
+    .closing h2 {
+      font-size: 30px;
+    }
+    .site-footer {
+      flex-wrap: wrap;
+      justify-content: center;
+      padding-block: 27px;
+      gap: 20px 28px;
+    }
+    .site-footer p {
+      flex-basis: 100%;
+      order: 3;
+      text-align: center;
+    }
+  }
+  @media (max-width: 390px) {
+    .page-width {
+      width: calc(100% - 32px);
+    }
+    .site-header nav {
+      gap: 13px;
+    }
+    .text-link {
+      font-size: 11px;
+    }
+    .header-action {
       padding-inline: 12px;
-      font-size: 12px;
+      gap: 8px;
     }
-
-    .hero-notes {
-      right: 8px;
-      bottom: 18px;
-      width: calc(100% - 34px);
+    .hero .little-label {
+      font-size: 10px;
     }
-
-    .hero-note > header {
-      min-height: 48px;
-      padding-block: 8px;
+    .hero-copy > p {
+      font-size: 13px;
     }
-
-    .hero-note-body {
-      padding-bottom: 7px;
+    .paper-note {
+      width: 91%;
+      padding: 22px 17px;
     }
-
-    .hero-note footer {
-      padding-block: 6px 9px;
+    .paper-note h3 {
+      max-width: 190px;
     }
-
-    .security-tool {
-      margin-inline: -2px;
+    .mascot-sticker img {
+      width: 82px;
+      height: 82px;
     }
-
-    .security-passkey,
-    .security-backup {
-      margin-inline: 8px;
+    .mascot-sticker > span {
+      font-size: 9px;
+    }
+    .board-note {
+      width: 95%;
+      padding: 13px;
+    }
+    .tiny-board {
+      gap: 6px;
+    }
+    .tiny-board > div {
+      padding: 6px;
+    }
+    .file-note {
+      width: 213px;
+      top: 272px;
+    }
+    .privacy-keepsake {
+      padding: 18px;
+    }
+    .passkey-row,
+    .backup-row {
+      padding: 12px;
+      gap: 9px;
     }
   }
-
-  @media (prefers-reduced-transparency: reduce) {
-    .landing-nav-shell {
-      background: var(--surface);
-      backdrop-filter: none;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .hero-note-main {
+    .clay-button {
+      transition: none;
+    }
+    .clay-button:hover,
+    .clay-button:active {
       transform: none;
+    }
+  }
+  @media (prefers-contrast: more) {
+    .paper-note,
+    .board-note,
+    .file-note,
+    .privacy-keepsake,
+    .header-action {
+      border-color: currentColor;
+      box-shadow: none;
     }
   }
 </style>

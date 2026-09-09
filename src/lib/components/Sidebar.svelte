@@ -9,7 +9,7 @@
     Plus,
     Star,
     Tags,
-    X,
+    X
   } from '@lucide/svelte';
   import ContextMenu from '$lib/components/ContextMenu.svelte';
   import { contextMenuAtPointer, contextMenuReturnFocus, type ContextMenuPlacement } from '$lib/context-menu';
@@ -55,7 +55,7 @@
     onPasskeys,
     onBackup,
     onLogout,
-    onClose,
+    onClose
   }: {
     user: UserInfo;
     tags: TagDto[];
@@ -83,14 +83,14 @@
   function openNavigationContextMenu(
     event: MouseEvent,
     kind: NavigationMenuState['kind'],
-    item: TagDto | KanbanBoardSummaryDto,
+    item: TagDto | KanbanBoardSummaryDto
   ): void {
     const button = event.currentTarget;
     if (!(button instanceof HTMLElement)) return;
     event.preventDefault();
     const common = {
       placement: contextMenuAtPointer(event, button),
-      returnFocus: contextMenuReturnFocus(button),
+      returnFocus: contextMenuReturnFocus(button)
     };
     navigationMenu =
       kind === 'tag'
@@ -199,7 +199,7 @@
             <span class="tag-count">{tag.count}</span>
           </button>
         {:else}
-          <div class="empty-tags">No tags yet</div>
+          <div class="empty-tags">Add #tags to a note to organize your thoughts here.</div>
         {/each}
       </div>
     {:else}

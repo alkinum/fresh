@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import { LayoutDashboard, Menu, Plus, Search, X } from '@lucide/svelte';
+  import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
+  import { FileText, LayoutDashboard, LoaderCircle, Menu, Plus, Search, Star, X } from '@lucide/svelte';
   import { onDestroy, tick, untrack } from 'svelte';
   import BackupDialog from '$lib/components/BackupDialog.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import KanbanWorkspace from '$lib/components/KanbanWorkspace.svelte';
   import NoteCard from '$lib/components/NoteCard.svelte';
   import NoteComposer from '$lib/components/NoteComposer.svelte';
@@ -20,7 +21,7 @@
   let pagination = $state({
     currentPage: 1,
     totalPages: 0,
-    totalItems: 0,
+    totalItems: 0
   });
   let activeView = $state<'all' | 'favorites'>('all');
   let activeWorkspace = $state<'notes' | 'kanban'>('notes');
@@ -33,6 +34,11 @@
   let backupOpen = $state(false);
   let passkeysOpen = $state(false);
   let loading = $state(false);
+  let loadError = $state('');
+  let composer = $state<NoteComposer>();
+  let confirmation = $state<ConfirmDialog>();
+  let searchTimer: ReturnType<typeof setTimeout> | undefined;
+  let allowNavigation = false;
   let notesRequestId = 0;
   let notesAbortController: AbortController | undefined;
   let toast = $state<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -55,21 +61,50 @@
     pagination = {
       currentPage: data.notes?.currentPage ?? 1,
       totalPages: data.notes?.totalPages ?? 0,
-      totalItems: data.notes?.totalItems ?? 0,
+      totalItems: data.notes?.totalItems ?? 0
     };
   });
 
-  let visibleNotes = $derived.by(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return notes;
-    return notes.filter(
-      (note) =>
-        note.title.toLowerCase().includes(query) ||
-        note.content.toLowerCase().includes(query) ||
-        note.tags.some((tag) => tag.name.toLowerCase().includes(query)) ||
-        note.attachments.some((attachment) => attachment.fileName.toLowerCase().includes(query)),
-    );
+  let workspaceTitle = $derived(
+    activeView === 'favorites'
+      ? 'Favorites'
+      : activeTagId
+        ? `#${tags.find((tag) => tag.id === activeTagId)?.name ?? 'Tag'}`
+        : 'Your notebook'
+  );
+
+  beforeNavigate((navigation) => {
+    if (allowNavigation || !composer?.hasUnsavedChanges()) return;
+    navigation.cancel();
+    if (!navigation.willUnload && navigation.to) {
+      const destination = navigation.to.url;
+      void composer.canDiscard().then(async (confirmed) => {
+        if (!confirmed) return;
+        allowNavigation = true;
+        try {
+          // SvelteKit has already resolved this navigation destination, including the base path.
+          // eslint-disable-next-line svelte/no-navigation-without-resolve
+          await goto(destination);
+        } finally {
+          allowNavigation = false;
+        }
+      });
+    }
   });
+
+  function searchNotes(): void {
+    clearTimeout(searchTimer);
+    notesAbortController?.abort();
+    notesRequestId += 1;
+    loading = true;
+    loadError = '';
+    searchTimer = setTimeout(() => void loadNotes(), 250);
+  }
+
+  function clearSearch(): void {
+    search = '';
+    void loadNotes();
+  }
 
   function clearToastTimer(): void {
     if (toastTimer) clearTimeout(toastTimer);
@@ -113,7 +148,7 @@
     pagination = {
       currentPage: totalPages === 0 ? 1 : Math.min(pagination.currentPage, totalPages),
       totalPages,
-      totalItems,
+      totalItems
     };
   }
 
@@ -128,30 +163,33 @@
     const query = new URLSearchParams({ page: String(page), limit: String(pageSize) });
     if (activeView === 'favorites') query.set('favorite', 'true');
     if (activeTagId) query.set('tagId', activeTagId);
+    if (search.trim()) query.set('search', search.trim());
     return query;
   }
 
   async function loadNotes(page = 1, append = false): Promise<void> {
     if (append && loading) return;
+    clearTimeout(searchTimer);
     notesAbortController?.abort();
     const controller = new AbortController();
     const requestId = ++notesRequestId;
     notesAbortController = controller;
     loading = true;
+    loadError = '';
     try {
       const response = await fetch(`/api/notes?${filterQuery(page)}`, { signal: controller.signal });
       if (!response.ok) throw new Error(await responseError(response));
       const result = (await response.json()) as PaginatedResult<NoteDto>;
       if (requestId !== notesRequestId) return;
-      notes = append ? [...notes, ...result.items] : result.items;
+      notes = append ? [...new Map([...notes, ...result.items].map((note) => [note.id, note])).values()] : result.items;
       pagination = {
         currentPage: result.currentPage,
         totalPages: result.totalPages,
-        totalItems: result.totalItems,
+        totalItems: result.totalItems
       };
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return;
-      showToast(error instanceof Error ? error.message : 'Could not load notes', 'error');
+      if (requestId === notesRequestId) loadError = error instanceof Error ? error.message : 'Could not load notes';
     } finally {
       if (requestId === notesRequestId) loading = false;
     }
@@ -159,6 +197,7 @@
 
   onDestroy(() => {
     notesAbortController?.abort();
+    clearTimeout(searchTimer);
     clearToastTimer();
   });
 
@@ -198,14 +237,14 @@
     if (!matchesFilter && index >= 0) {
       notes.splice(index, 1);
       updateTotalItems(-1);
-    }
-    else if (matchesFilter && index >= 0) notes[index] = note;
+    } else if (matchesFilter && index >= 0) notes[index] = note;
     else if (matchesFilter) notes = [note, ...notes];
     notes = [...notes];
     editing = null;
     if (created && matchesFilter) updateTotalItems(1);
     showToast(created ? 'Note saved' : 'Note updated');
     void refreshTags();
+    void loadNotes();
   }
 
   async function toggleFavorite(note: NoteDto): Promise<void> {
@@ -213,7 +252,7 @@
       const response = await fetch(`/api/notes/${note.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ isFavorite: !note.isFavorite }),
+        body: JSON.stringify({ isFavorite: !note.isFavorite })
       });
       if (!response.ok) throw new Error(await responseError(response));
       const updated = (await response.json()) as NoteDto;
@@ -221,6 +260,7 @@
         notes = notes.filter((item) => item.id !== note.id);
         updateTotalItems(-1);
       } else notes = notes.map((item) => (item.id === note.id ? updated : item));
+      void loadNotes();
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not update favorite', 'error');
     }
@@ -252,7 +292,7 @@
       const response = await fetch(`/api/notes/${note.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ taskIndex, taskChecked: checked }),
+        body: JSON.stringify({ taskIndex, taskChecked: checked })
       });
       if (!response.ok) throw new Error(await responseError(response));
 
@@ -266,7 +306,13 @@
   }
 
   async function deleteNote(note: NoteDto): Promise<void> {
-    if (!confirm(`Delete “${note.title}” and its attachments?`)) return;
+    if (
+      !(await confirmation?.ask(
+        'Delete this note?',
+        `“${note.title}” and its attachments will be permanently deleted.`
+      ))
+    )
+      return;
     try {
       const response = await fetch(`/api/notes/${note.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(await responseError(response));
@@ -275,20 +321,22 @@
       if (editing?.id === note.id) editing = null;
       showToast('Note deleted');
       void refreshTags();
+      void loadNotes();
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not delete note', 'error');
     }
   }
 
   async function deleteAttachment(note: NoteDto, attachment: AttachmentDto): Promise<void> {
-    if (!confirm(`Delete “${attachment.fileName}”?`)) return;
+    if (!(await confirmation?.ask('Delete this attachment?', `“${attachment.fileName}” will be permanently deleted.`)))
+      return;
     try {
       const response = await fetch(`/api/attachments/${attachment.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(await responseError(response));
       notes = notes.map((item) =>
         item.id === note.id
           ? { ...item, attachments: item.attachments.filter((file) => file.id !== attachment.id) }
-          : item,
+          : item
       );
       showToast('Attachment deleted');
     } catch (error) {
@@ -297,14 +345,14 @@
   }
 
   async function focusComposer(nextEditing: NoteDto | null): Promise<void> {
+    if (editing?.id !== nextEditing?.id && !(await composer?.canDiscard())) return;
     activeWorkspace = 'notes';
     editing = nextEditing;
     await tick();
-    const composer = document.querySelector<HTMLElement>('.composer');
-    const textarea = composer?.querySelector<HTMLTextAreaElement>('textarea');
+    const element = document.querySelector<HTMLElement>('.composer');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    composer?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
-    textarea?.focus({ preventScroll: true });
+    element?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+    await composer?.focusEditor();
   }
 
   function editNote(note: NoteDto): void {
@@ -312,9 +360,13 @@
   }
 
   async function logout(): Promise<void> {
+    sidebarOpen = false;
+    await tick();
+    if (!(await composer?.canDiscard())) return;
     try {
       const result = await authClient.signOut();
       if (result.error) throw new Error(result.error.message ?? 'Could not sign out');
+      allowNavigation = true;
       location.reload();
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not sign out', 'error');
@@ -326,6 +378,8 @@
     location.reload();
   }
 </script>
+
+<svelte:head><title>{activeWorkspace === 'notes' ? workspaceTitle : 'Kanban'} | Fresh</title></svelte:head>
 
 <a class="skip-link" href="#app-main">Skip to content</a>
 <div class="app-shell">
@@ -387,41 +441,59 @@
     </header>
 
     <div class:kanban-mode={activeWorkspace === 'kanban'} class="workspace-inner">
-      {#if activeWorkspace === 'notes'}
-        <NoteComposer
-          note={editing}
-          onSaved={savedNote}
-          onCancel={() => (editing = null)}
-          onError={(message) => showToast(message, 'error')}
-        />
+      <div hidden={activeWorkspace !== 'notes'}>
+        <header class="workspace-heading">
+          <div>
+            <span class="workspace-eyebrow">A little room to think</span>
+            <h1>{workspaceTitle}</h1>
+          </div>
+          <button class="secondary-button" onclick={() => void focusComposer(null)}><Plus size={16} /> New note</button>
+        </header>
+      </div>
+      <NoteComposer
+        bind:this={composer}
+        hidden={activeWorkspace !== 'notes'}
+        note={editing}
+        onSaved={savedNote}
+        onCancel={() => (editing = null)}
+        onError={(message) => showToast(message, 'error')}
+      />
 
+      <div hidden={activeWorkspace !== 'notes'}>
         <div class="notes-header">
           <div>
-            <h1>
-              {activeView === 'favorites'
-                ? 'Favorites'
-                : activeTagId
-                  ? `#${tags.find((tag) => tag.id === activeTagId)?.name ?? 'Tag'}`
-                  : 'Notes'}
-            </h1>
-            <span>{pagination.totalItems}</span>
+            <h2>{search.trim() ? 'Search results' : 'Saved notes'}</h2>
+            <span>{loading ? '…' : pagination.totalItems}</span>
           </div>
           <label class="search-box">
             <Search size={16} />
             <span class="sr-only">Search notes</span>
-            <input bind:value={search} type="search" placeholder="Search notes" />
+            <input
+              bind:value={search}
+              oninput={searchNotes}
+              maxlength="200"
+              type="search"
+              placeholder="Search your notebook"
+            />
             {#if search}
-              <button aria-label="Clear search" title="Clear" onclick={() => (search = '')}><X size={14} /></button>
+              <button aria-label="Clear search" title="Clear" onclick={clearSearch}><X size={14} /></button>
             {/if}
           </label>
         </div>
 
-        {#if visibleNotes.length > 0}
-          <div class="notes-grid">
-            {#each visibleNotes as note (note.id)}
+        {#if loading}
+          <p class="notes-feedback" role="status"><LoaderCircle class="spin" size={16} /> Loading notes…</p>
+        {/if}
+        {#if loadError}
+          <div class="notes-feedback error" role="alert">
+            <span>{loadError}</span><button class="secondary-button" onclick={() => void loadNotes()}>Try again</button>
+          </div>
+        {:else if notes.length > 0}
+          <div class="notes-grid" aria-busy={loading} inert={loading}>
+            {#each notes as note (note.id)}
               <NoteCard
                 {note}
-                onFavorite={(item) => void toggleFavorite(item)}
+                onFavorite={toggleFavorite}
                 onEdit={editNote}
                 onCopy={copyNote}
                 onDelete={(item) => void deleteNote(item)}
@@ -441,13 +513,39 @@
               {loading ? 'Loading...' : 'Load more'}
             </button>
           {/if}
-        {:else}
+        {:else if !loading}
           <div class="empty-state">
-            <div class="empty-glyph"><Plus size={22} /></div>
-            <h2>{search ? 'No matching notes' : 'Your next note starts here'}</h2>
+            <div class="empty-glyph">
+              {#if search}<Search size={24} />{:else if activeView === 'favorites'}<Star size={24} />{:else}<FileText
+                  size={24}
+                />{/if}
+            </div>
+            <h2>
+              {search
+                ? 'No matching notes'
+                : activeView === 'favorites'
+                  ? 'Keep your favorites close'
+                  : activeTagId
+                    ? 'No notes with this tag'
+                    : 'Your next note starts here'}
+            </h2>
+            <p>
+              {search
+                ? 'Try a different word, tag, or filename.'
+                : activeView === 'favorites'
+                  ? 'Tap the star on a note to find it here.'
+                  : 'Save a thought above. Give it a #tag to make it easy to find.'}
+            </p>
+            <button
+              class="secondary-button"
+              onclick={() =>
+                search ? clearSearch() : activeView === 'favorites' ? changeView('all') : void focusComposer(null)}
+              >{search ? 'Clear search' : activeView === 'favorites' ? 'Browse notes' : 'Write a note'}</button
+            >
           </div>
         {/if}
-      {:else}
+      </div>
+      {#if activeWorkspace === 'kanban'}
         <KanbanWorkspace
           initialBoards={kanbanBoards}
           {activeBoardId}
@@ -462,8 +560,11 @@
   </main>
 </div>
 
+<ConfirmDialog bind:this={confirmation} />
+
 <BackupDialog
   open={backupOpen}
+  hasUnsavedChanges={composer?.hasUnsavedChanges() ?? false}
   onClose={() => (backupOpen = false)}
   onComplete={backupImported}
   onError={(message) => showToast(message, 'error')}

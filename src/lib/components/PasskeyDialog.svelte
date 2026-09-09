@@ -3,6 +3,8 @@
   import { Fingerprint, KeyRound, LoaderCircle, Plus, ShieldCheck, Trash2, X } from '@lucide/svelte';
   import { authClient } from '$lib/auth-client';
   import { modalFocus } from '$lib/modal-focus';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+  let confirmation = $state<ConfirmDialog>();
 
   let {
     open,
@@ -88,7 +90,13 @@
   }
 
   async function deletePasskey(passkey: Passkey): Promise<void> {
-    if (!confirm(`Delete “${passkey.name || 'Passkey'}”?`)) return;
+    if (
+      !(await confirmation?.ask(
+        'Delete this passkey?',
+        `“${passkey.name || 'Passkey'}” will no longer sign you in. You can still use GitHub or another registered passkey.`
+      ))
+    )
+      return;
     deletingId = passkey.id;
     try {
       const result = await authClient.passkey.deletePasskey({ id: passkey.id });
@@ -118,8 +126,12 @@
       aria-labelledby="passkey-title"
       aria-busy={loading || registering || deletingId !== null}
     >
+      <ConfirmDialog bind:this={confirmation} />
       <header>
-        <div class="dialog-title"><Fingerprint size={19} /><h2 id="passkey-title">Passkeys</h2></div>
+        <div class="dialog-title">
+          <Fingerprint size={19} />
+          <h2 id="passkey-title">Passkeys</h2>
+        </div>
         <button class="icon-button" aria-label="Close" title="Close" onclick={dismiss}><X size={18} /></button>
       </header>
 
@@ -131,7 +143,13 @@
         </div>
       </div>
 
-      <form class="passkey-add" onsubmit={(event) => { event.preventDefault(); void addPasskey(); }}>
+      <form
+        class="passkey-add"
+        onsubmit={(event) => {
+          event.preventDefault();
+          void addPasskey();
+        }}
+      >
         <label for="passkey-name">Passkey name</label>
         <div>
           <input
@@ -161,7 +179,9 @@
               <span class="passkey-row-icon" aria-hidden="true"><KeyRound size={17} /></span>
               <div>
                 <strong>{passkey.name || 'Passkey'}</strong>
-                <span>{passkey.backedUp ? 'Synced passkey' : 'Device passkey'} - Added {dateLabel(passkey.createdAt)}</span>
+                <span
+                  >{passkey.backedUp ? 'Synced passkey' : 'Device passkey'} - Added {dateLabel(passkey.createdAt)}</span
+                >
               </div>
               <button
                 class="icon-button danger"

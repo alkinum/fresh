@@ -11,19 +11,21 @@
     MoreHorizontal,
     Plus,
     Trash2,
-    X,
+    X
   } from '@lucide/svelte';
   import { onDestroy, tick } from 'svelte';
   import ContextMenu from '$lib/components/ContextMenu.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import {
     contextMenuAtElement,
     contextMenuAtPointer,
     contextMenuReturnFocus,
     type ContextMenuInitialFocus,
-    type ContextMenuPlacement,
+    type ContextMenuPlacement
   } from '$lib/context-menu';
   import { modalFocus } from '$lib/modal-focus';
   import type { KanbanBoardDto, KanbanBoardSummaryDto, KanbanCardDto, KanbanColumnDto } from '$lib/types';
+  let confirmation = $state<ConfirmDialog>();
 
   type KanbanMenuTarget =
     | {
@@ -78,7 +80,7 @@
     ['#e69a2c', 'Amber'],
     ['#df6676', 'Coral'],
     ['#8b72d9', 'Violet'],
-    ['#d65d9e', 'Pink'],
+    ['#d65d9e', 'Pink']
   ]);
 
   let {
@@ -88,7 +90,7 @@
     onBoardsChange,
     onSelectBoard,
     onError,
-    onSuccess,
+    onSuccess
   }: {
     initialBoards: KanbanBoardSummaryDto[];
     activeBoardId: string | null;
@@ -198,7 +200,7 @@
 
     const timeout = window.setTimeout(() => {
       const activeTab = [...tabs.querySelectorAll<HTMLElement>('[data-board-id]')].find(
-        (item) => item.dataset.boardId === id,
+        (item) => item.dataset.boardId === id
       );
       activeTab?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }, 0);
@@ -220,7 +222,7 @@
       columnCount: value.columnCount,
       cardCount: value.cardCount,
       createdAt: value.createdAt,
-      updatedAt: value.updatedAt,
+      updatedAt: value.updatedAt
     };
   }
 
@@ -233,10 +235,7 @@
     else setBoards([...boards, summary]);
   }
 
-  function updateBoardSummary(
-    id: string,
-    update: (summary: KanbanBoardSummaryDto) => KanbanBoardSummaryDto,
-  ): void {
+  function updateBoardSummary(id: string, update: (summary: KanbanBoardSummaryDto) => KanbanBoardSummaryDto): void {
     setBoards(boards.map((item) => (item.id === id ? update(item) : item)));
   }
 
@@ -253,7 +252,7 @@
     target: KanbanMenuTarget,
     placement: ContextMenuPlacement,
     returnFocus: HTMLElement,
-    initialFocus: ContextMenuInitialFocus = 'first',
+    initialFocus: ContextMenuInitialFocus = 'first'
   ): void {
     menu = { ...target, placement, returnFocus, initialFocus } as KanbanMenuState;
   }
@@ -428,7 +427,7 @@
       const response = await fetch(editing ? `/api/kanban/boards/${editing.id}` : '/api/kanban/boards', {
         method: editing ? 'PATCH' : 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name, color: boardColor }),
+        body: JSON.stringify({ name, color: boardColor })
       });
       if (!response.ok) throw new Error(await responseError(response));
       const saved = (await response.json()) as KanbanBoardDto;
@@ -445,9 +444,17 @@
   }
 
   async function deleteBoard(): Promise<void> {
-    if (!board || !confirm(`Delete “${board.name}” and all its cards?`)) return;
+    if (!board) return;
     const deletingId = board.id;
+    const name = board.name;
     menu = null;
+    if (
+      !(await confirmation?.ask(
+        'Delete this board?',
+        `“${name}” and all its columns and cards will be permanently deleted.`
+      ))
+    )
+      return;
     try {
       const response = await fetch(`/api/kanban/boards/${deletingId}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(await responseError(response));
@@ -482,7 +489,7 @@
       const response = await fetch(`/api/kanban/boards/${boardId}/columns`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name })
       });
       if (!response.ok) throw new Error(await responseError(response));
       const column = (await response.json()) as KanbanColumnDto;
@@ -490,13 +497,13 @@
         syncBoard({
           ...board,
           columnCount: board.columnCount + 1,
-          columns: [...board.columns, column],
+          columns: [...board.columns, column]
         });
       } else if (board?.id !== boardId) {
         updateBoardSummary(boardId, (summary) => ({
           ...summary,
           columnCount: summary.columnCount + 1,
-          updatedAt: column.updatedAt,
+          updatedAt: column.updatedAt
         }));
       }
       if (generation === addColumnGeneration) {
@@ -534,14 +541,14 @@
       const response = await fetch(`/api/kanban/columns/${column.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name })
       });
       if (!response.ok) throw new Error(await responseError(response));
       const updated = (await response.json()) as KanbanColumnDto;
       if (board?.id === boardId) {
         syncBoard({
           ...board,
-          columns: board.columns.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)),
+          columns: board.columns.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
         });
       } else {
         updateBoardSummary(boardId, (summary) => ({ ...summary, updatedAt: updated.updatedAt }));
@@ -556,10 +563,17 @@
   }
 
   async function deleteColumn(column: KanbanColumnDto): Promise<void> {
-    if (!board || !confirm(`Delete “${column.name}” and its ${column.cards.length} cards?`)) return;
+    if (!board) return;
     const boardId = column.boardId;
     const removedCardCount = column.cards.length;
     menu = null;
+    if (
+      !(await confirmation?.ask(
+        'Delete this column?',
+        `“${column.name}” and its ${column.cards.length} cards will be permanently deleted.`
+      ))
+    )
+      return;
     try {
       const response = await fetch(`/api/kanban/columns/${column.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(await responseError(response));
@@ -570,14 +584,14 @@
             ...board,
             columnCount: Math.max(0, board.columnCount - 1),
             cardCount: Math.max(0, board.cardCount - currentColumn.cards.length),
-            columns: board.columns.filter((item) => item.id !== column.id),
+            columns: board.columns.filter((item) => item.id !== column.id)
           });
         }
       } else {
         updateBoardSummary(boardId, (summary) => ({
           ...summary,
           columnCount: Math.max(0, summary.columnCount - 1),
-          cardCount: Math.max(0, summary.cardCount - removedCardCount),
+          cardCount: Math.max(0, summary.cardCount - removedCardCount)
         }));
       }
       onSuccess('Column deleted');
@@ -607,7 +621,7 @@
       const response = await fetch(`/api/kanban/columns/${column.id}/cards`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({ title })
       });
       if (!response.ok) throw new Error(await responseError(response));
       const card = (await response.json()) as KanbanCardDto;
@@ -616,14 +630,14 @@
           ...board,
           cardCount: board.cardCount + 1,
           columns: board.columns.map((item) =>
-            item.id === column.id ? { ...item, cards: [...item.cards, card] } : item,
-          ),
+            item.id === column.id ? { ...item, cards: [...item.cards, card] } : item
+          )
         });
       } else if (board?.id !== boardId) {
         updateBoardSummary(boardId, (summary) => ({
           ...summary,
           cardCount: summary.cardCount + 1,
-          updatedAt: card.updatedAt,
+          updatedAt: card.updatedAt
         }));
       }
       if (generation === addCardGeneration) {
@@ -669,12 +683,12 @@
         body: JSON.stringify({
           title: nextTitle,
           description: nextDescription,
-          ...(moving ? { columnId: nextColumnId, position: targetColumn.cards.length } : {}),
-        }),
+          ...(moving ? { columnId: nextColumnId, position: targetColumn.cards.length } : {})
+        })
       });
       if (!response.ok) throw new Error(await responseError(response));
       editingCard = null;
-      if (activeBoardId === boardId && !await loadBoard(boardId, false)) return;
+      if (activeBoardId === boardId && !(await loadBoard(boardId, false))) return;
       onSuccess('Card updated');
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Could not update card');
@@ -684,9 +698,10 @@
   }
 
   async function deleteCard(card: KanbanCardDto): Promise<void> {
-    if (!board || !confirm(`Delete “${card.title}”?`)) return;
+    if (!board) return;
     const boardId = card.boardId;
     menu = null;
+    if (!(await confirmation?.ask('Delete this card?', `“${card.title}” will be permanently deleted.`))) return;
     try {
       const response = await fetch(`/api/kanban/cards/${card.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(await responseError(response));
@@ -698,14 +713,14 @@
             cardCount: Math.max(0, board.cardCount - 1),
             columns: board.columns.map((column) => ({
               ...column,
-              cards: column.cards.filter((item) => item.id !== card.id).map((item, position) => ({ ...item, position })),
-            })),
+              cards: column.cards.filter((item) => item.id !== card.id).map((item, position) => ({ ...item, position }))
+            }))
           });
         }
       } else {
         updateBoardSummary(boardId, (summary) => ({
           ...summary,
-          cardCount: Math.max(0, summary.cardCount - 1),
+          cardCount: Math.max(0, summary.cardCount - 1)
         }));
       }
       if (editingCard?.id === card.id) editingCard = null;
@@ -729,7 +744,7 @@
       const nextCards = [...withoutCard];
       nextCards.splice(Math.min(Math.max(targetPosition, 0), nextCards.length), 0, {
         ...card,
-        columnId: targetColumnId,
+        columnId: targetColumnId
       });
       return { ...column, cards: nextCards.map((item, position) => ({ ...item, position })) };
     });
@@ -754,7 +769,7 @@
       const response = await fetch(`/api/kanban/cards/${card.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ columnId: targetColumnId, position: targetPosition }),
+        body: JSON.stringify({ columnId: targetColumnId, position: targetPosition })
       });
       if (!response.ok) throw new Error(await responseError(response));
       const updated = (await response.json()) as KanbanCardDto;
@@ -763,8 +778,8 @@
           ...board,
           columns: board.columns.map((column) => ({
             ...column,
-            cards: column.cards.map((item) => (item.id === updated.id ? updated : item)),
-          })),
+            cards: column.cards.map((item) => (item.id === updated.id ? updated : item))
+          }))
         });
       } else if (activeBoardId === boardId) {
         await loadBoard(boardId, false);
@@ -844,9 +859,7 @@
     const nextBoard = boards[nextIndex];
     onSelectBoard(nextBoard.id);
     requestAnimationFrame(() => {
-      boardTabsElement
-        ?.querySelector<HTMLElement>(`[data-board-id="${CSS.escape(nextBoard.id)}"]`)
-        ?.focus();
+      boardTabsElement?.querySelector<HTMLElement>(`[data-board-id="${CSS.escape(nextBoard.id)}"]`)?.focus();
     });
   }
 
@@ -865,6 +878,8 @@
     }
   }
 </script>
+
+<ConfirmDialog bind:this={confirmation} />
 
 <svelte:window onkeydown={handleWindowKeydown} />
 
@@ -917,193 +932,236 @@
       aria-labelledby={`board-tab-${board.id}`}
       tabindex="0"
     >
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <header
-      class="kanban-board-header"
-      style={`--board-color: ${board.color}`}
-      oncontextmenu={openCurrentBoardContextMenu}
-    >
-      <div class="kanban-board-title">
-        <span aria-hidden="true"></span>
-        <div>
-          <h1>{board.name}</h1>
-          <p>
-            {board.cardCount}
-            {board.cardCount === 1 ? 'card' : 'cards'} · {board.columnCount}
-            {board.columnCount === 1 ? 'column' : 'columns'}
-          </p>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <header
+        class="kanban-board-header"
+        style={`--board-color: ${board.color}`}
+        oncontextmenu={openCurrentBoardContextMenu}
+      >
+        <div class="kanban-board-title">
+          <span aria-hidden="true"></span>
+          <div>
+            <h1>{board.name}</h1>
+            <p>
+              {board.cardCount}
+              {board.cardCount === 1 ? 'card' : 'cards'} · {board.columnCount}
+              {board.columnCount === 1 ? 'column' : 'columns'}
+            </p>
+          </div>
         </div>
-      </div>
-      <div class="menu-wrap">
-        <button
-          class="icon-button"
-          aria-label="Board actions"
-          aria-haspopup="menu"
-          aria-expanded={menu?.kind === 'board' && menu.item.id === board.id}
-          aria-controls={menu?.kind === 'board' && menu.item.id === board.id
-            ? `kanban-board-menu-${board.id}`
-            : undefined}
-          title="Board actions"
-          onclick={toggleCurrentBoardMenu}
-          onkeydown={openCurrentBoardMenuFromKeyboard}
-        >
-          <MoreHorizontal size={18} />
-        </button>
-      </div>
-    </header>
+        <div class="menu-wrap">
+          <button
+            class="icon-button"
+            aria-label="Board actions"
+            aria-haspopup="menu"
+            aria-expanded={menu?.kind === 'board' && menu.item.id === board.id}
+            aria-controls={menu?.kind === 'board' && menu.item.id === board.id
+              ? `kanban-board-menu-${board.id}`
+              : undefined}
+            title="Board actions"
+            onclick={toggleCurrentBoardMenu}
+            onkeydown={openCurrentBoardMenuFromKeyboard}
+          >
+            <MoreHorizontal size={18} />
+          </button>
+        </div>
+      </header>
 
-    <div class="kanban-columns" role="region" aria-label={`${board.name} columns`}>
-      {#each board.columns as column, columnIndex (column.id)}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <section
-          class="kanban-column"
-          style={`--board-color: ${board.color}`}
-          oncontextmenu={(event) => openItemContextMenu(event, { kind: 'column', item: column, columnIndex })}
-        >
-          <header>
-            {#if editingColumnId === column.id}
-              <form
-                class="column-name-form"
-                aria-busy={columnBusy}
-                onsubmit={(event) => {
-                  event.preventDefault();
-                  void saveColumn(column);
-                }}
-              >
-                <input
-                  data-column-name={column.id}
-                  bind:value={editingColumnName}
-                  maxlength="60"
-                  aria-label="Column name"
-                  required
-                />
-                <button
-                  class="icon-button"
-                  type="submit"
-                  aria-label="Save column name"
-                  title="Save"
-                  disabled={columnBusy}
-                >
-                  {#if columnBusy}<LoaderCircle class="spin" size={15} />{:else}<Check size={15} />{/if}
-                </button>
-                <button
-                  class="icon-button"
-                  type="button"
-                  aria-label="Cancel rename"
-                  title="Cancel"
-                  onclick={() => {
-                    editingColumnId = null;
-                    columnEditGeneration += 1;
+      <div class="kanban-columns" role="region" aria-label={`${board.name} columns`}>
+        {#each board.columns as column, columnIndex (column.id)}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <section
+            class="kanban-column"
+            style={`--board-color: ${board.color}`}
+            oncontextmenu={(event) => openItemContextMenu(event, { kind: 'column', item: column, columnIndex })}
+          >
+            <header>
+              {#if editingColumnId === column.id}
+                <form
+                  class="column-name-form"
+                  aria-busy={columnBusy}
+                  onsubmit={(event) => {
+                    event.preventDefault();
+                    void saveColumn(column);
                   }}
                 >
-                  <X size={15} />
-                </button>
+                  <input
+                    data-column-name={column.id}
+                    bind:value={editingColumnName}
+                    maxlength="60"
+                    aria-label="Column name"
+                    required
+                  />
+                  <button
+                    class="icon-button"
+                    type="submit"
+                    aria-label="Save column name"
+                    title="Save"
+                    disabled={columnBusy}
+                  >
+                    {#if columnBusy}<LoaderCircle class="spin" size={15} />{:else}<Check size={15} />{/if}
+                  </button>
+                  <button
+                    class="icon-button"
+                    type="button"
+                    aria-label="Cancel rename"
+                    title="Cancel"
+                    onclick={() => {
+                      editingColumnId = null;
+                      columnEditGeneration += 1;
+                    }}
+                  >
+                    <X size={15} />
+                  </button>
+                </form>
+              {:else}
+                <div class="kanban-column-title">
+                  <span aria-hidden="true"></span>
+                  <h2>{column.name}</h2>
+                  <small>{column.cards.length}</small>
+                </div>
+                <div class="menu-wrap">
+                  <button
+                    class="icon-button"
+                    aria-label={`${column.name} actions`}
+                    aria-haspopup="menu"
+                    aria-expanded={menu?.kind === 'column' && menu.item.id === column.id}
+                    aria-controls={menu?.kind === 'column' && menu.item.id === column.id
+                      ? `kanban-column-menu-${column.id}`
+                      : undefined}
+                    title="Column actions"
+                    onclick={(event) => toggleMenuFromButton(event, { kind: 'column', item: column, columnIndex })}
+                    onkeydown={(event) => openMenuFromKeyboard(event, { kind: 'column', item: column, columnIndex })}
+                  >
+                    <MoreHorizontal size={17} />
+                  </button>
+                </div>
+              {/if}
+            </header>
+
+            <div
+              class:drag-target={dragTargetColumnId === column.id}
+              class="kanban-card-list"
+              role="list"
+              ondragover={(event) => allowDrop(event, column.id)}
+              ondrop={(event) => dropCard(event, column)}
+            >
+              {#each column.cards as card (card.id)}
+                <article
+                  class:dragging={draggedCardId === card.id}
+                  class:busy={busyCardId === card.id}
+                  class="kanban-card"
+                  data-kanban-card={card.id}
+                  role="listitem"
+                  draggable={busyCardId === null}
+                  ondragstart={(event) => beginDrag(event, card)}
+                  ondragend={endDrag}
+                  oncontextmenu={(event) => openItemContextMenu(event, { kind: 'card', item: card, columnIndex })}
+                >
+                  <div class="kanban-card-topline">
+                    <GripVertical class="kanban-drag-handle" size={15} aria-hidden="true" />
+                    <button class="kanban-card-open" onclick={() => openCardDialog(card)}>{card.title}</button>
+                    <div class="menu-wrap">
+                      <button
+                        class="icon-button"
+                        aria-label={`${card.title} actions`}
+                        aria-haspopup="menu"
+                        aria-expanded={menu?.kind === 'card' && menu.item.id === card.id}
+                        aria-controls={menu?.kind === 'card' && menu.item.id === card.id
+                          ? `kanban-card-menu-${card.id}`
+                          : undefined}
+                        title="Card actions"
+                        disabled={busyCardId === card.id}
+                        onclick={(event) => toggleMenuFromButton(event, { kind: 'card', item: card, columnIndex })}
+                        onkeydown={(event) => openMenuFromKeyboard(event, { kind: 'card', item: card, columnIndex })}
+                      >
+                        {#if busyCardId === card.id}<LoaderCircle class="spin" size={14} />{:else}<MoreHorizontal
+                            size={16}
+                          />{/if}
+                      </button>
+                    </div>
+                  </div>
+                  {#if card.description}
+                    <p>{card.description}</p>
+                  {/if}
+                  <footer><time datetime={card.updatedAt}>{dateLabel(card.updatedAt)}</time></footer>
+                </article>
+              {/each}
+            </div>
+
+            {#if addingCardColumnId === column.id}
+              <form
+                class="kanban-add-card-form"
+                aria-busy={addingCardBusy}
+                onsubmit={(event) => {
+                  event.preventDefault();
+                  void addCard(column);
+                }}
+              >
+                <textarea
+                  bind:this={newCardTextarea}
+                  bind:value={newCardTitle}
+                  maxlength="200"
+                  rows="3"
+                  placeholder="Card title"
+                  aria-label="Card title"
+                  required></textarea>
+                <div>
+                  <button class="primary-button" type="submit" disabled={addingCardBusy}>
+                    {#if addingCardBusy}<LoaderCircle class="spin" size={14} />{:else}<Plus size={14} />{/if}
+                    Add card
+                  </button>
+                  <button
+                    class="icon-button"
+                    type="button"
+                    aria-label="Cancel new card"
+                    title="Cancel"
+                    onclick={() => {
+                      addingCardColumnId = null;
+                      addCardGeneration += 1;
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </form>
             {:else}
-              <div class="kanban-column-title">
-                <span aria-hidden="true"></span>
-                <h2>{column.name}</h2>
-                <small>{column.cards.length}</small>
-              </div>
-              <div class="menu-wrap">
-                <button
-                  class="icon-button"
-                  aria-label={`${column.name} actions`}
-                  aria-haspopup="menu"
-                  aria-expanded={menu?.kind === 'column' && menu.item.id === column.id}
-                  aria-controls={menu?.kind === 'column' && menu.item.id === column.id
-                    ? `kanban-column-menu-${column.id}`
-                    : undefined}
-                  title="Column actions"
-                  onclick={(event) => toggleMenuFromButton(event, { kind: 'column', item: column, columnIndex })}
-                  onkeydown={(event) => openMenuFromKeyboard(event, { kind: 'column', item: column, columnIndex })}
-                >
-                  <MoreHorizontal size={17} />
-                </button>
-              </div>
-            {/if}
-          </header>
-
-          <div
-            class:drag-target={dragTargetColumnId === column.id}
-            class="kanban-card-list"
-            role="list"
-            ondragover={(event) => allowDrop(event, column.id)}
-            ondrop={(event) => dropCard(event, column)}
-          >
-            {#each column.cards as card (card.id)}
-              <article
-                class:dragging={draggedCardId === card.id}
-                class:busy={busyCardId === card.id}
-                class="kanban-card"
-                data-kanban-card={card.id}
-                role="listitem"
-                draggable={busyCardId === null}
-                ondragstart={(event) => beginDrag(event, card)}
-                ondragend={endDrag}
-                oncontextmenu={(event) => openItemContextMenu(event, { kind: 'card', item: card, columnIndex })}
+              <button class="kanban-add-card" onclick={() => openAddCard(column.id)}><Plus size={15} /> Add card</button
               >
-                <div class="kanban-card-topline">
-                  <GripVertical class="kanban-drag-handle" size={15} aria-hidden="true" />
-                  <button class="kanban-card-open" onclick={() => openCardDialog(card)}>{card.title}</button>
-                  <div class="menu-wrap">
-                    <button
-                      class="icon-button"
-                      aria-label={`${card.title} actions`}
-                      aria-haspopup="menu"
-                      aria-expanded={menu?.kind === 'card' && menu.item.id === card.id}
-                      aria-controls={menu?.kind === 'card' && menu.item.id === card.id
-                        ? `kanban-card-menu-${card.id}`
-                        : undefined}
-                      title="Card actions"
-                      disabled={busyCardId === card.id}
-                      onclick={(event) => toggleMenuFromButton(event, { kind: 'card', item: card, columnIndex })}
-                      onkeydown={(event) => openMenuFromKeyboard(event, { kind: 'card', item: card, columnIndex })}
-                    >
-                      {#if busyCardId === card.id}<LoaderCircle class="spin" size={14} />{:else}<MoreHorizontal
-                          size={16}
-                        />{/if}
-                    </button>
-                  </div>
-                </div>
-                {#if card.description}
-                  <p>{card.description}</p>
-                {/if}
-                <footer><time datetime={card.updatedAt}>{dateLabel(card.updatedAt)}</time></footer>
-              </article>
-            {/each}
-          </div>
+            {/if}
+          </section>
+        {/each}
 
-          {#if addingCardColumnId === column.id}
+        <section class="kanban-column kanban-new-column">
+          {#if addingColumn}
             <form
-              class="kanban-add-card-form"
-              aria-busy={addingCardBusy}
+              aria-busy={columnBusy}
               onsubmit={(event) => {
                 event.preventDefault();
-                void addCard(column);
+                void addColumn();
               }}
             >
-              <textarea
-                bind:this={newCardTextarea}
-                bind:value={newCardTitle}
-                maxlength="200"
-                rows="3"
-                placeholder="Card title"
-                aria-label="Card title"
-                required></textarea>
+              <input
+                bind:this={newColumnInput}
+                bind:value={newColumnName}
+                maxlength="60"
+                placeholder="Column name"
+                aria-label="Column name"
+                required
+              />
               <div>
-                <button class="primary-button" type="submit" disabled={addingCardBusy}>
-                  {#if addingCardBusy}<LoaderCircle class="spin" size={14} />{:else}<Plus size={14} />{/if}
-                  Add card
+                <button class="primary-button" type="submit" disabled={columnBusy}>
+                  {#if columnBusy}<LoaderCircle class="spin" size={14} />{:else}<Plus size={14} />{/if}
+                  Add column
                 </button>
                 <button
                   class="icon-button"
                   type="button"
-                  aria-label="Cancel new card"
+                  aria-label="Cancel new column"
                   title="Cancel"
                   onclick={() => {
-                    addingCardColumnId = null;
-                    addCardGeneration += 1;
+                    addingColumn = false;
+                    addColumnGeneration += 1;
                   }}
                 >
                   <X size={16} />
@@ -1111,67 +1169,26 @@
               </div>
             </form>
           {:else}
-            <button class="kanban-add-card" onclick={() => openAddCard(column.id)}><Plus size={15} /> Add card</button>
+            <button
+              onclick={() => {
+                addColumnGeneration += 1;
+                addingColumn = true;
+                newColumnName = '';
+                const generation = addColumnGeneration;
+                void tick().then(() => {
+                  if (generation === addColumnGeneration && addingColumn) newColumnInput?.focus();
+                });
+              }}><Plus size={17} /> Add column</button
+            >
           {/if}
         </section>
-      {/each}
-
-      <section class="kanban-column kanban-new-column">
-        {#if addingColumn}
-          <form
-            aria-busy={columnBusy}
-            onsubmit={(event) => {
-              event.preventDefault();
-              void addColumn();
-            }}
-          >
-            <input
-              bind:this={newColumnInput}
-              bind:value={newColumnName}
-              maxlength="60"
-              placeholder="Column name"
-              aria-label="Column name"
-              required
-            />
-            <div>
-              <button class="primary-button" type="submit" disabled={columnBusy}>
-                {#if columnBusy}<LoaderCircle class="spin" size={14} />{:else}<Plus size={14} />{/if}
-                Add column
-              </button>
-              <button
-                class="icon-button"
-                type="button"
-                aria-label="Cancel new column"
-                title="Cancel"
-                onclick={() => {
-                  addingColumn = false;
-                  addColumnGeneration += 1;
-                }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </form>
-        {:else}
-          <button
-            onclick={() => {
-              addColumnGeneration += 1;
-              addingColumn = true;
-              newColumnName = '';
-              const generation = addColumnGeneration;
-              void tick().then(() => {
-                if (generation === addColumnGeneration && addingColumn) newColumnInput?.focus();
-              });
-            }}><Plus size={17} /> Add column</button
-          >
-        {/if}
-      </section>
-    </div>
+      </div>
     </div>
   {:else}
     <div class="empty-state kanban-empty">
       <div class="empty-glyph"><LayoutDashboard size={22} /></div>
       <h2>Create your first board</h2>
+      <p>A little plan, a big project. Give it a place to grow, one card at a time.</p>
       <button class="primary-button" onclick={() => openBoardDialog()}><Plus size={15} /> New board</button>
     </div>
   {/if}
@@ -1278,7 +1295,13 @@
       >
         <label>
           <span>Board name</span>
-          <input data-dialog-initial-focus bind:value={boardName} maxlength="80" placeholder="Product launch" required />
+          <input
+            data-dialog-initial-focus
+            bind:value={boardName}
+            maxlength="80"
+            placeholder="Product launch"
+            required
+          />
         </label>
         <fieldset class="board-color-field">
           <legend>Board color</legend>

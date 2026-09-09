@@ -4,6 +4,7 @@
   import { FilePenLine } from '@lucide/svelte';
   import NoteCard from '$lib/components/NoteCard.svelte';
   import NoteComposer from '$lib/components/NoteComposer.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import type { AttachmentDto, AttachmentKind, NoteDto, TagDto } from '$lib/types';
 
   let { initialNote }: { initialNote: NoteDto } = $props();
@@ -42,12 +43,26 @@ A quiet place for **clear thinking**.
     ['application/pdf', 'pdf']
   ]);
   const documentExtensions = new Set([
-    'doc', 'docx', 'odt', 'pages', 'ppt', 'pptx', 'odp', 'key', 'xls', 'xlsx', 'ods', 'numbers', 'rtf'
+    'doc',
+    'docx',
+    'odt',
+    'pages',
+    'ppt',
+    'pptx',
+    'odp',
+    'key',
+    'xls',
+    'xlsx',
+    'ods',
+    'numbers',
+    'rtf'
   ]);
   const archiveExtensions = new Set(['zip', '7z', 'rar', 'tar', 'gz', 'bz2', 'xz']);
 
   let note = $state<NoteDto | null>(untrack(() => initialNote));
   let editing = $state<NoteDto | null>(null);
+  let composer = $state<NoteComposer>();
+  let confirmation = $state<ConfirmDialog>();
   let root = $state<HTMLDivElement>();
   let status = $state('');
   let statusTimer: ReturnType<typeof setTimeout> | undefined;
@@ -67,7 +82,11 @@ A quiet place for **clear thinking**.
     if (mediaType.startsWith('text/') || ['md', 'markdown', 'json', 'yaml', 'yml', 'csv', 'log'].includes(extension)) {
       return 'text';
     }
-    if (documentExtensions.has(extension) || mediaType.includes('officedocument') || mediaType.includes('opendocument')) {
+    if (
+      documentExtensions.has(extension) ||
+      mediaType.includes('officedocument') ||
+      mediaType.includes('opendocument')
+    ) {
       return 'document';
     }
     if (archiveExtensions.has(extension) || mediaType.includes('zip') || mediaType.includes('compressed')) {
@@ -127,14 +146,16 @@ A quiet place for **clear thinking**.
     const existingTags = new Map(existing?.tags.map((tag) => [tag.name, tag]) ?? []);
     const tags: TagDto[] = extractTags(normalizedContent).map((name) => {
       const current = existingTags.get(name);
-      return current ?? {
-        id: `landing-tag-${name}`,
-        name,
-        color: tagColor(name),
-        count: 1,
-        createdAt: now,
-        updatedAt: now
-      };
+      return (
+        current ?? {
+          id: `landing-tag-${name}`,
+          name,
+          color: tagColor(name),
+          count: 1,
+          createdAt: now,
+          updatedAt: now
+        }
+      );
     });
 
     return {
@@ -173,9 +194,10 @@ A quiet place for **clear thinking**.
   }
 
   async function editNote(item: NoteDto): Promise<void> {
+    if (editing?.id !== item.id && !(await composer?.canDiscard())) return;
     editing = item;
     await tick();
-    root?.querySelector<HTMLTextAreaElement>('.composer textarea')?.focus();
+    await composer?.focusEditor();
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     root?.querySelector('.composer')?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
   }
@@ -189,14 +211,18 @@ A quiet place for **clear thinking**.
     }
   }
 
-  function deleteNote(item: NoteDto): void {
-    if (!confirm(`Delete “${item.title}” from this demo?`)) return;
+  async function deleteNote(item: NoteDto): Promise<void> {
+    if (!(await confirmation?.ask('Delete this demo note?', `“${item.title}” will be removed from the demo.`))) return;
     replaceNote(null);
     if (editing?.id === item.id) editing = null;
     showStatus('Note deleted');
   }
 
-  function deleteAttachment(item: NoteDto, attachment: AttachmentDto): void {
+  async function deleteAttachment(item: NoteDto, attachment: AttachmentDto): Promise<void> {
+    if (
+      !(await confirmation?.ask('Delete this attachment?', `“${attachment.fileName}” will be removed from the demo.`))
+    )
+      return;
     const updated = {
       ...item,
       attachments: item.attachments.filter((current) => current.id !== attachment.id)
@@ -226,6 +252,7 @@ A quiet place for **clear thinking**.
 
 <div class="landing-note-demo" bind:this={root} role="region" aria-label="Interactive note demo">
   <NoteComposer
+    bind:this={composer}
     note={editing}
     initialContent={initialDraft}
     {renderContent}
@@ -256,6 +283,8 @@ A quiet place for **clear thinking**.
 
   <div class:visible={Boolean(status)} class="landing-demo-status" role="status" aria-atomic="true">{status}</div>
 </div>
+
+<ConfirmDialog bind:this={confirmation} />
 
 <style>
   .landing-note-demo {

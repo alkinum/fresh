@@ -8,14 +8,21 @@ import type { RequestHandler } from './$types';
 
 const createSchema = z.object({
   content: z.string().trim().min(1).max(MAX_NOTE_CONTENT_CHARACTERS),
-  colorIndicator: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
+  colorIndicator: z
+    .string()
+    .regex(/^#[0-9a-f]{6}$/i)
+    .optional(),
   isFavorite: z.boolean().optional()
 });
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).max(1_000_000).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(30),
   tagId: z.string().uuid().optional(),
-  favorite: z.enum(['true', 'false']).transform((value) => value === 'true').optional()
+  search: z.string().trim().max(200).optional(),
+  favorite: z
+    .enum(['true', 'false'])
+    .transform((value) => value === 'true')
+    .optional()
 });
 
 export const GET: RequestHandler = async ({ locals, platform, url }) => {
@@ -26,6 +33,7 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
       page: url.searchParams.get('page') ?? undefined,
       limit: url.searchParams.get('limit') ?? undefined,
       tagId: url.searchParams.get('tagId') ?? undefined,
+      search: url.searchParams.get('search') ?? undefined,
       favorite: url.searchParams.get('favorite') ?? undefined
     });
     const result = await listNotes(getDb(platform.env.DB), {

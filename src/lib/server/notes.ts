@@ -16,6 +16,7 @@ interface ListOptions {
   limit?: number;
   tagId?: string;
   favorite?: boolean;
+  search?: string;
 }
 
 interface NoteInput {
@@ -31,11 +32,7 @@ function tagColor(name: string): string {
   return `hsl(${hue} 58% 64%)`;
 }
 
-async function hydrateNotes(
-  db: Database,
-  userId: string,
-  rows: Array<typeof notes.$inferSelect>
-): Promise<NoteDto[]> {
+async function hydrateNotes(db: Database, userId: string, rows: Array<typeof notes.$inferSelect>): Promise<NoteDto[]> {
   if (rows.length === 0) return [];
   const noteIds = rows.map((note) => note.id);
 
@@ -113,7 +110,10 @@ async function tagSyncStatements(
 
   const statements: D1PreparedStatement[] = [];
   if (candidates.length > 0) {
-    statements.push(db.$client.prepare(`
+    statements.push(
+      db.$client
+        .prepare(
+          `
       INSERT OR IGNORE INTO tags (id, user_id, name, color, last_note_modified_at, created_at, updated_at)
       SELECT json_extract(candidate.value, '$[0]'), ?, json_extract(candidate.value, '$[1]'),
         json_extract(candidate.value, '$[2]'), ?, ?, ?
@@ -123,30 +123,47 @@ async function tagSyncStatements(
         SELECT 1 FROM tags
         WHERE user_id = ? AND name = json_extract(candidate.value, '$[1]')
       )
-    `).bind(userId, now, now, now, JSON.stringify(candidates), noteId, userId, userId));
+    `
+        )
+        .bind(userId, now, now, now, JSON.stringify(candidates), noteId, userId, userId)
+    );
   }
-  statements.push(db.$client.prepare(`
+  statements.push(
+    db.$client
+      .prepare(
+        `
     DELETE FROM note_tags
     WHERE note_id = ? AND EXISTS (
       SELECT 1 FROM notes WHERE id = ? AND user_id = ?
     )
-  `).bind(noteId, noteId, userId));
+  `
+      )
+      .bind(noteId, noteId, userId)
+  );
 
   if (names.length > 0) {
     statements.push(
-      db.$client.prepare(`
+      db.$client
+        .prepare(
+          `
         INSERT INTO note_tags (note_id, tag_id)
         SELECT ?, min(tags.id)
         FROM json_each(?) AS requested
         INNER JOIN tags ON tags.user_id = ? AND tags.name = requested.value
         WHERE EXISTS (SELECT 1 FROM notes WHERE id = ? AND user_id = ?)
         GROUP BY requested.value
-      `).bind(noteId, JSON.stringify(names), userId, noteId, userId),
-      db.$client.prepare(`
+      `
+        )
+        .bind(noteId, JSON.stringify(names), userId, noteId, userId),
+      db.$client
+        .prepare(
+          `
         UPDATE tags SET last_note_modified_at = ?, updated_at = ?
         WHERE user_id = ? AND name IN (SELECT value FROM json_each(?))
           AND EXISTS (SELECT 1 FROM notes WHERE id = ? AND user_id = ?)
-      `).bind(now, now, userId, JSON.stringify(names), noteId, userId)
+      `
+        )
+        .bind(now, now, userId, JSON.stringify(names), noteId, userId)
     );
   }
   return statements;
@@ -154,31 +171,53 @@ async function tagSyncStatements(
 
 export async function listNotes(db: Database, options: ListOptions): Promise<PaginatedResult<NoteDto>> {
   const page = Number.isSafeInteger(options.page) && (options.page ?? 0) > 0 ? options.page! : 1;
-  const limit = Number.isSafeInteger(options.limit) && (options.limit ?? 0) > 0
-    ? Math.min(100, options.limit!)
-    : 30;
+  const limit = Number.isSafeInteger(options.limit) && (options.limit ?? 0) > 0 ? Math.min(100, options.limit!) : 30;
   const conditions = [eq(notes.userId, options.userId)];
+
+  const search = options.search?.trim();
+  if (search) {
+    // instr treats %, _ and backslashes literally instead of as LIKE wildcards.
+    conditions.push(sql`(
+      instr(lower(${notes.title}), lower(${search})) > 0
+      OR instr(lower(${notes.content}), lower(${search})) > 0
+      OR EXISTS (
+        SELECT 1 FROM ${attachments}
+        WHERE ${attachments.noteId} = ${notes.id} AND ${attachments.userId} = ${options.userId}
+          AND instr(lower(${attachments.fileName}), lower(${search})) > 0
+      )
+      OR EXISTS (
+        SELECT 1 FROM ${noteTags} INNER JOIN ${tags} ON ${tags.id} = ${noteTags.tagId}
+        WHERE ${noteTags.noteId} = ${notes.id} AND ${tags.userId} = ${options.userId}
+          AND instr(lower(${tags.name}), lower(${search})) > 0
+      )
+    )`);
+  }
 
   if (options.favorite !== undefined) conditions.push(eq(notes.isFavorite, options.favorite));
   if (options.tagId) {
-    conditions.push(inArray(
-      notes.id,
-      db
-        .select({ id: noteTags.noteId })
-        .from(noteTags)
-        .innerJoin(tags, eq(noteTags.tagId, tags.id))
-        .where(and(eq(noteTags.tagId, options.tagId), eq(tags.userId, options.userId)))
-    ));
+    conditions.push(
+      inArray(
+        notes.id,
+        db
+          .select({ id: noteTags.noteId })
+          .from(noteTags)
+          .innerJoin(tags, eq(noteTags.tagId, tags.id))
+          .where(and(eq(noteTags.tagId, options.tagId), eq(tags.userId, options.userId)))
+      )
+    );
   }
 
   const where = and(...conditions);
-  const [countRow] = await db.select({ count: sql<number>`count(*)` }).from(notes).where(where);
+  const [countRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(notes)
+    .where(where);
   const totalItems = Number(countRow?.count ?? 0);
   const rows = await db
     .select()
     .from(notes)
     .where(where)
-    .orderBy(desc(notes.isFavorite), desc(notes.updatedAt))
+    .orderBy(desc(notes.isFavorite), desc(notes.updatedAt), desc(notes.id))
     .limit(limit)
     .offset((page - 1) * limit);
 
@@ -234,25 +273,38 @@ export async function createNote(db: Database, userId: string, input: NoteInput)
   const colorIndicator = input.colorIndicator ?? noteColors[index];
   const isFavorite = input.isFavorite ?? false;
   const timestamp = Math.floor(now.getTime() / 1000);
-  assertNoteFitsD1([id, userId, title, content, renderedContent, now.toISOString().slice(0, 10), colorIndicator, isFavorite]);
+  assertNoteFitsD1([
+    id,
+    userId,
+    title,
+    content,
+    renderedContent,
+    now.toISOString().slice(0, 10),
+    colorIndicator,
+    isFavorite
+  ]);
   const tagStatements = await tagSyncStatements(db, userId, id, content, timestamp);
 
   await db.$client.batch([
-    db.$client.prepare(`
+    db.$client
+      .prepare(
+        `
       INSERT INTO notes (id, user_id, title, content, rendered_content, date, color_indicator, is_favorite, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      id,
-      userId,
-      title,
-      content,
-      renderedContent,
-      now.toISOString().slice(0, 10),
-      colorIndicator,
-      isFavorite ? 1 : 0,
-      timestamp,
-      timestamp
-    ),
+    `
+      )
+      .bind(
+        id,
+        userId,
+        title,
+        content,
+        renderedContent,
+        now.toISOString().slice(0, 10),
+        colorIndicator,
+        isFavorite ? 1 : 0,
+        timestamp,
+        timestamp
+      ),
     ...tagStatements
   ]);
 
@@ -280,12 +332,12 @@ export async function updateNote(
   if (content !== undefined) {
     assertNoteFitsD1([id, userId, nextTitle, nextContent, nextRenderedContent, existing.date]);
   }
-  const statements = content === undefined
-    ? []
-    : await tagSyncStatements(db, userId, id, nextContent, timestamp);
+  const statements = content === undefined ? [] : await tagSyncStatements(db, userId, id, nextContent, timestamp);
 
   await db.$client.batch([
-    db.$client.prepare(`
+    db.$client
+      .prepare(
+        `
       UPDATE notes
       SET
         title = CASE WHEN ? = 1 THEN ? ELSE title END,
@@ -295,30 +347,27 @@ export async function updateNote(
         is_favorite = coalesce(?, is_favorite),
         updated_at = ?
       WHERE id = ? AND user_id = ?
-    `).bind(
-      content === undefined ? 0 : 1,
-      nextTitle,
-      content === undefined ? 0 : 1,
-      nextContent,
-      content === undefined ? 0 : 1,
-      nextRenderedContent,
-      input.colorIndicator ?? null,
-      input.isFavorite === undefined ? null : input.isFavorite ? 1 : 0,
-      timestamp,
-      id,
-      userId
-    ),
+    `
+      )
+      .bind(
+        content === undefined ? 0 : 1,
+        nextTitle,
+        content === undefined ? 0 : 1,
+        nextContent,
+        content === undefined ? 0 : 1,
+        nextRenderedContent,
+        input.colorIndicator ?? null,
+        input.isFavorite === undefined ? null : input.isFavorite ? 1 : 0,
+        timestamp,
+        id,
+        userId
+      ),
     ...statements
   ]);
   return getNote(db, userId, id);
 }
 
-export async function deleteNote(
-  db: Database,
-  bucket: R2Bucket,
-  userId: string,
-  id: string
-): Promise<boolean> {
+export async function deleteNote(db: Database, bucket: R2Bucket, userId: string, id: string): Promise<boolean> {
   const [owned] = await db
     .select({ id: notes.id })
     .from(notes)
@@ -330,24 +379,26 @@ export async function deleteNote(
     .select({ key: attachments.r2Key })
     .from(attachments)
     .where(and(eq(attachments.noteId, id), eq(attachments.userId, userId)));
-  const deleted = await db.$client
-    .prepare('DELETE FROM notes WHERE id = ? AND user_id = ?')
-    .bind(id, userId)
-    .run();
+  const deleted = await db.$client.prepare('DELETE FROM notes WHERE id = ? AND user_id = ?').bind(id, userId).run();
   if (Number(deleted.meta.changes ?? 0) === 0) return false;
   const cleanupResults = await Promise.allSettled([
-    deleteR2Objects(bucket, files.map((file) => file.key)),
+    deleteR2Objects(
+      bucket,
+      files.map((file) => file.key)
+    ),
     deleteR2Prefix(bucket, `${userId}/${id}/`)
   ]);
   const cleanupErrors = cleanupResults.filter((result) => result.status === 'rejected');
   if (cleanupErrors.length > 0) {
-    console.error(JSON.stringify({
-      message: 'could not remove deleted note attachments',
-      noteId: id,
-      errors: cleanupErrors.map((result) => (
-        result.reason instanceof Error ? result.reason.message : String(result.reason)
-      ))
-    }));
+    console.error(
+      JSON.stringify({
+        message: 'could not remove deleted note attachments',
+        noteId: id,
+        errors: cleanupErrors.map((result) =>
+          result.reason instanceof Error ? result.reason.message : String(result.reason)
+        )
+      })
+    );
   }
   return true;
 }
