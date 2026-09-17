@@ -17,7 +17,9 @@ import type { RequestHandler } from './$types';
 const uploadIdSchema = z.string().uuid();
 
 function isAttachmentIdConflict(error: unknown): boolean {
-  return error instanceof Error && /unique constraint|constraint failed/i.test(error.message);
+  if (!(error instanceof Error)) return false;
+  return /unique constraint|constraint failed/i.test(error.message)
+    || (error.cause !== error && isAttachmentIdConflict(error.cause));
 }
 
 export const POST: RequestHandler = async ({ locals, params, platform, request }) => {
@@ -69,6 +71,7 @@ export const POST: RequestHandler = async ({ locals, params, platform, request }
         const object = await platform.env.ATTACHMENTS.head(existing.r2Key);
         if (!object || object.size !== contentLength) {
           await putSizedObject(platform.env.ATTACHMENTS, existing.r2Key, request.body, contentLength, {
+            onlyIf: object ? { etagMatches: object.etag } : { etagDoesNotMatch: '*' },
             httpMetadata: { contentType: mediaType },
             customMetadata: { userId: locals.user.id, noteId: params.id, fileName }
           });
@@ -77,7 +80,8 @@ export const POST: RequestHandler = async ({ locals, params, platform, request }
       }
       return json({ error: 'Attachment upload ID is already in use' }, { status: 409 });
     }
-    const r2Key = `${locals.user.id}/${params.id}/${id}/${fileName}`;
+    // Give each attempt its own object; only the D1 winner becomes visible.
+    const r2Key = `${locals.user.id}/${params.id}/${id}/${crypto.randomUUID()}/${fileName}`;
 
     await putSizedObject(platform.env.ATTACHMENTS, r2Key, request.body, contentLength, {
       httpMetadata: { contentType: mediaType },
@@ -106,11 +110,11 @@ export const POST: RequestHandler = async ({ locals, params, platform, request }
       if (
         committed?.userId === locals.user.id
         && committed.noteId === params.id
-        && committed.r2Key === r2Key
         && committed.fileName === fileName
         && committed.mediaType === mediaType
         && committed.size === contentLength
       ) {
+        if (committed.r2Key !== r2Key) await platform.env.ATTACHMENTS.delete(r2Key);
         return json(attachmentDto(committed));
       }
       await platform.env.ATTACHMENTS.delete(r2Key);

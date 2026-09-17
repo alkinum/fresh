@@ -1,6 +1,6 @@
 # Product Status
 
-Snapshot date: 2026-09-10. Package version: `0.2.0`. License: Apache-2.0.
+Snapshot date: 2026-09-17. Package version: `0.2.0`. License: Apache-2.0.
 
 This is a status snapshot, not a roadmap promise. Update it when capabilities or maturity materially change.
 
@@ -56,15 +56,15 @@ The production GitHub OAuth callback is `https://fresh.pwp.workers.dev/api/auth/
 
 ## Validation and test baseline
 
-The dependency refresh uses the current stable releases of all direct packages, with TypeScript intentionally constrained to `^6.0.3` (the latest stable 6.x). Key versions are Svelte 5.57.0, SvelteKit 2.70.3, Vite 8.2.2, Better Auth/Passkey 1.7.3, Markdown-it 15.0.1, Vitest/coverage 5.0.0, and Wrangler 4.130.0. The separate Markdown-it types package is removed in favor of upstream public types. `development.md` explains the narrow compatibility overrides and Node.js requirements.
+The 2026-09-16–17 dependency refresh checks all direct packages against current stable registry releases, with TypeScript intentionally constrained to `^6.0.3` (the latest stable 6.x). Key versions are Svelte 5.57.0, SvelteKit 2.70.3, Vite 8.3.0, Better Auth/Passkey 1.7.5, Markdown-it 15.0.2, Zod 4.6.5, Vitest/coverage 5.0.1, Wrangler 4.133.0. The separate Markdown-it types package is removed in favor of upstream public types. `development.md` explains the remaining narrow compatibility overrides, removed Vitest/Sharp overrides, and Node.js requirements.
 
 At this snapshot, the following pass locally:
 
 - `npm run check` with 0 Svelte/TypeScript errors and 0 warnings.
 - `npm run lint`.
-- `npm test -- --maxWorkers=1` with 8 files and 58 tests.
+- `npm test -- --maxWorkers=1 --testTimeout=30000 --hookTimeout=30000` with 10 files and 71 tests, including disposable local D1/R2 and actual Workers streaming execution. Longer timeouts accommodate the shared development host; earlier attempts encountered local proxy connection failures and timeouts.
 - `npm run build` for the Cloudflare production target.
-- Clean `npm ci`, a valid `npm ls --all` dependency tree, and `npm audit` with zero vulnerabilities after the dependency refresh. `npm outdated` reports only TypeScript 7, which is intentionally outside the requested 6.x range.
+- Clean `npm ci`, a valid `npm ls --all` dependency tree, and `npm audit` with zero vulnerabilities after the dependency refresh. `npm outdated` reports TypeScript 7 (intentionally excluded) and the anomalous Node types `latest` tag, which points to 22.20.3 while Fresh uses the newer 26.6.1 from `ts6.0`.
 
 Unit coverage currently exercises:
 
@@ -75,6 +75,8 @@ Unit coverage currently exercises:
 - D1 note/tag and Kanban concurrency, limits, compaction, and per-user hydration boundaries.
 - Server search beyond the first page, literal wildcard characters, attachment filenames, combined filters, and per-user search isolation.
 - Bounded JSON parsing for large Unicode note requests.
+- The maximum 100-note page within D1's parameter limit, task/content edit races without stale tag updates, and full-length Unicode Kanban card requests.
+- Concurrent attachment upload retries, delayed backup uploads after finalization, exact-length enforcement in Node and Workers, and long supplementary-Unicode backup filenames.
 
 Manual browser verification has covered desktop light, desktop dark, and `390x844` mobile layouts, including the public landing page, login waves, logo depth, sidebar selection, editor auto-growth, Passkey management, and overflow behavior. Context-menu verification covers menu-button and native right-click entry points for notes, attachments, tags, board tabs and headers, columns, and cards; per-item command sets and disabled edge movement; Arrow Up/Down, Home/End, Escape, and focus restoration; preserved native menus for links and selected text; and viewport flipping and clamping without document overflow in the production container. A virtual WebAuthn authenticator has also verified registration, sign-out, discoverable Passkey sign-in, `/app` return, and test-credential cleanup.
 
@@ -83,6 +85,9 @@ The 2026-09-10 review additionally exercised the rebuilt landing, login, branded
 The subsequent dependency refresh was verified in the production preview on Node 26.5.0: the public demo renders Markdown, KaTeX, and highlighted code; existing signed sessions remain valid; authenticated notes save, search, and persist tasks; and a virtual WebAuthn authenticator completes passkey registration, sign-out, discoverable sign-in, and deletion using Better Auth 1.7.3. Desktop and mobile theme checks reported no runtime errors. Better Auth's current core/passkey fields match the existing Drizzle schema, so no database migration was required. This verification also used disposable local data; real GitHub OAuth and physical authenticator hardware remain outside this pass.
 
 The first production release reran check, lint, all 58 tests, and the production build successfully. Live HTTP checks verified `/` and `/login` return 200, anonymous `/app` redirects to `/login`, protected notes/Kanban/backup APIs return 401, and an unknown route returns 404. Live Chrome checks covered landing and login at 1440px and 390px in both themes with no overflow, broken images, failed application assets, or runtime errors. The local landing demo previews and saves Markdown without production API writes. Favicon, navigation, PWA, and maskable assets were compared byte-for-byte with the committed files. Production authenticated notebook writes and complete OAuth/passkey sign-in remain outside this public smoke test.
+
+The 2026-09-16 code/dependency review fixes six correctness issues involving concurrent attachment and backup uploads, stale task writes, full-page D1 hydration, Unicode Kanban requests, and truncated uploads. See `review-2026-09-16.md` for triggers and regression coverage. The updated production preview on Node 26.5.0 passes public Markdown/math/highlighting preview and save, signed-session access, authenticated note save/search/task persistence, and virtual Passkey registration, sign-out, discoverable sign-in, and deletion with Better Auth 1.7.5. Desktop light/dark and 390x844 mobile screenshots were inspected; the completed browser pass reported no runtime errors or mobile overflow. An initial Passkey attempt hit a transient local Miniflare proxy `EADDRNOTAVAIL`; the complete rerun passed without code or configuration changes. The disposable local review account was removed afterwards. Real GitHub OAuth, physical passkeys, and production load were not exercised.
+
 
 ## Known scope and limitations
 

@@ -92,10 +92,13 @@ Rendering supports line breaks, linkification, typographic substitutions, emoji,
 
 Saved-note task inputs receive stable parsed indexes. A checkbox request sends an index and target state; the server locates the source line through parsed token mapping, changes only its `[ ]` or `[x]` marker, and runs the normal note update pipeline again.
 
+The task update compares its source content inside the atomic D1 batch. Concurrent content changes produce `409` instead of being overwritten; the failed mutation does not replace the newer note's tag relations.
+
 ## Query and state behavior
 
 - Notes are ordered by favorite state, most recent update, and ID for deterministic pagination ties.
 - The initial and API default page size is 30; server limits cannot exceed 100.
+- Note hydration uses one JSON-bound ID set per related-data query, so a full 100-note page stays below D1's 100-parameter limit.
 - Favorite and tag filters are server queries.
 - Search runs on the server across the user's entire notebook: title, content, owned tag names, and owned attachment filenames. It uses a literal substring query, combines with favorite/tag filters, and paginates results. SQLite `lower` provides ASCII case folding; non-ASCII text matches literally. This is not an indexed full-text search.
 - The search input debounces requests by 250ms and cancels superseded requests. Loading and failed requests are distinct from an empty result; a failed request has an inline retry. Appended pages deduplicate IDs.
@@ -105,6 +108,7 @@ Saved-note task inputs receive stable parsed indexes. A checkbox request sends a
 - Kanban is a separate workspace view. The page loads board summaries, the active board is fetched on selection, and the tab rail and sidebar both switch boards without a full navigation.
 - New boards start with three columns. Cards can be dragged between columns; move actions in the card menu provide a non-drag path for keyboard and touch users.
 - Kanban boards are ordered by position and start with `To do`, `In progress`, and `Done` columns. Current limits are 30 boards per user, 12 columns per board, and 500 cards per board.
+- Card titles allow 200 characters and descriptions allow 10,000. Shared API byte budgets account for Unicode and JSON escapes rather than assuming one byte per character.
 - Card moves are optimistic in the browser and are rolled back if the owned, same-board server update fails.
 - Notes, attachments, tags, boards, columns, and cards expose the same viewport-aware context-menu pattern. Native menus remain available for selected text, links, and embedded media.
 
@@ -112,7 +116,7 @@ Saved-note task inputs receive stable parsed indexes. A checkbox request sends a
 
 The composer keeps selected files locally until the note exists. On save, it creates or updates the note and uploads each pending file to `/api/notes/:id/attachments`.
 
-The server validates ownership, filename, content length, and 95 MiB maximum. It streams bytes to a user/note-scoped R2 key, then records metadata in D1. Client-generated upload IDs make retries idempotent; a retry repairs a missing or wrongly sized R2 object for matching owned metadata. If metadata insertion fails, the new R2 object is removed.
+The server validates ownership, filename, content length, and 95 MiB maximum. It streams bytes to a user/note-scoped R2 key unique to each attempt, then records metadata in D1. Client-generated upload IDs make retries idempotent; concurrent attempts retain the D1 winner's object and remove losing attempt objects. A retry repairs a missing or wrongly sized R2 object for matching owned metadata with a conditional write. Both streaming and Node proxy paths reject truncated bodies before committing bytes. If metadata insertion fails, the new R2 object is removed.
 
 Presentation depends on classified kind:
 
@@ -144,6 +148,8 @@ The import UI defaults to merge. Replace requires a visible acknowledgement that
 6. Replace mode deletes the user's former D1 records inside that atomic batch and removes their old R2 objects only after the batch succeeds; merge mode preserves existing data.
 
 Finalization claims a short R2 phase lease so cancellation and finalization cannot clean the same staged files concurrently. A per-user receipt makes retries return the original counts without applying an import twice. Expired sessions are cleaned before old receipts are pruned, which prevents a stale session from deleting attachment objects already referenced by D1.
+
+Staged attachment uploads use conditional R2 writes. An exact-size staged object is retained on retries, so a delayed upload cannot overwrite bytes that were already finalized into the live notebook.
 
 The version 2 backup contract includes notes, tags, note relations, attachments, Kanban boards, columns, and cards. Version 1 archives remain valid imports.
 

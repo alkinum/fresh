@@ -9,7 +9,7 @@ This directory is the maintained context for anyone developing Fresh. Read it be
 3. [design-system.md](./design-system.md) before any UI, copy, interaction, icon, or motion change.
 4. [product-status.md](./product-status.md) to understand what is implemented and what must not be assumed.
 
-The [2026-09-10 product/design review](./review-2026-09-10.md) records the latest audit findings, verification, and notebook-icon generation provenance.
+The [2026-09-16–17 code/dependency review](./review-2026-09-16.md) records the latest correctness findings and dependency verification. The [2026-09-10 product/design review](./review-2026-09-10.md) records the visual review and notebook-icon generation provenance.
 
 ## Project identity
 

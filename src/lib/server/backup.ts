@@ -643,7 +643,12 @@ export async function uploadPreparedBackupAttachment(
     .first('found');
   if (finalized) throw new RequestError('Backup import has already been finalized', 409);
 
+  const existingObject = await bucket.head(attachment[3]);
+  // Once an exact-length object exists, retries must not change its bytes, including
+  // requests that started before finalization and finish after the D1 commit.
+  if (existingObject?.size === attachment[7]) return;
   await putSizedObject(bucket, attachment[3], body, attachment[7], {
+    onlyIf: existingObject ? { etagMatches: existingObject.etag } : { etagDoesNotMatch: '*' },
     httpMetadata: { contentType: attachment[5] },
     customMetadata: { userId, noteId: attachment[2], fileName: attachment[4] }
   });

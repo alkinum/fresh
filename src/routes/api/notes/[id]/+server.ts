@@ -45,7 +45,7 @@ export const PATCH: RequestHandler = async ({ locals, params, platform, request 
       const content = toggleTaskItem(existing.content, input.taskIndex, input.taskChecked);
       if (content === null) return json({ error: 'Task item not found' }, { status: 400 });
 
-      const note = await updateNote(db, locals.user.id, params.id, { content });
+      const note = await updateNote(db, locals.user.id, params.id, { content }, existing.content);
       return note ? json(note) : json({ error: 'Note not found' }, { status: 404 });
     }
 

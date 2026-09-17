@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MAX_NOTE_CONTENT_CHARACTERS } from '$lib/note-limits';
+import { MAX_KANBAN_CARD_TITLE_CHARACTERS, MAX_KANBAN_CARD_DESCRIPTION_CHARACTERS } from '$lib/kanban-limits';
 
 export const MAX_BACKUP_MANIFEST_BYTES = 10 * 1024 * 1024;
 export const MAX_BACKUP_ATTACHMENTS = 500;
@@ -82,8 +83,8 @@ const kanbanCardSchema = z.object({
   id: z.string().min(1).max(100),
   boardId: z.string().min(1).max(100),
   columnId: z.string().min(1).max(100),
-  title: z.string().min(1).max(200),
-  description: z.string().max(10_000),
+  title: z.string().min(1).max(MAX_KANBAN_CARD_TITLE_CHARACTERS),
+  description: z.string().max(MAX_KANBAN_CARD_DESCRIPTION_CHARACTERS),
   position: z.number().int().nonnegative().max(10_000),
   createdAt: dateTime,
   updatedAt: dateTime

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { decryptBackup, encryptBackup, MAX_BACKUP_ARCHIVE_BYTES } from '../src/lib/backup';
 import { MAX_BACKUP_FILE_BYTES } from '../src/lib/backup-schema';
+import { safeFileName } from '../src/lib/server/attachments';
 import type { BackupManifest } from '../src/lib/types';
 
 const manifest: BackupManifest = {
@@ -142,6 +143,14 @@ describe('encrypted backup format', () => {
     const restored = await decryptBackup(backup, 'correct horse battery staple');
     expect(restored.manifest).toEqual(manifest);
     expect(new TextDecoder().decode(restored.attachmentFiles.get('file-1'))).toBe('hello');
+  });
+
+  it('round trips an allowed 180-code-point Unicode attachment filename', async () => {
+    const fileName = safeFileName('🙂'.repeat(200));
+    const source = { ...manifest, attachments: [{ ...manifest.attachments[0], fileName }] };
+    const backup = await encryptBackup(source, 'correct horse battery staple', async () => new TextEncoder().encode('hello'));
+    const restored = await decryptBackup(backup, 'correct horse battery staple');
+    expect(restored.manifest.attachments[0].fileName).toBe(fileName);
   });
 
   it('rejects a wrong password', async () => {

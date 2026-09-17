@@ -36,9 +36,9 @@ Keep direct dependencies on current stable releases and TypeScript on the latest
 Current scoped overrides have specific compatibility purposes:
 
 - SvelteKit's `cookie` dependency uses the latest 1.x release, `1.1.1`. Cookie 2 removes `parse` and `serialize`, which SvelteKit still imports, so do not force version 2 until upstream migrates those calls. This replaces the previous global `0.7.2` override.
-- Better Auth's optional `vitest` peer is aligned with the root Vitest 5 dependency. Better Auth 1.7.3 still declares a peer range ending at 4; Fresh does not use its Vitest integration. The application tests and actual session/passkey workflows must pass before retaining this exception.
-- Miniflare's `sharp` is overridden to `0.35.4`, which fixes the libheif vulnerabilities in the version still pinned by the current Wrangler toolchain. Recheck this override when upgrading Wrangler.
 - `esbuild` is kept at the current `0.28.2` across the toolchain, including Drizzle Kit's older loader dependencies.
+
+Better Auth 1.7.5 supports Vitest 5 directly, and Wrangler 4.133.0's Miniflare pins Sharp 0.35.4 upstream; their former overrides are removed. `@types/node` uses 26.6.1 (the registry's `ts6.0` tag); its `latest` tag currently points to the older 22.20.3 line, so `npm outdated` can report it even though the installed release is newer. Zod 4.6.5 counts string limits by Unicode code point, including supplementary characters in attachment filenames.
 
 Markdown-it 15 provides its own public types. Import `StateCore` and `Token` from `markdown-it`; do not restore `@types/markdown-it` or internal `markdown-it/lib/` type imports.
 
@@ -124,11 +124,15 @@ Keep route handlers thin. Parse requests, verify authentication and bindings, de
 - Never expose raw R2 keys to clients. DTOs expose authenticated application URLs.
 - Parse JSON bodies and imported manifests with Zod. Maintain current maximum lengths unless a product decision explicitly changes them.
 - Keep note creation and updates responsible for deriving titles, rendering Markdown, and synchronizing tags.
+- Saved-task mutations must compare the source content inside the D1 write and return `409` on a concurrent edit. A rejected task write must not rebuild tags from the stale content.
+- Hydrating a full 100-note page must stay within D1's 100 bound parameters; pass note ID sets through a JSON binding.
 - Keep Kanban board, column, and card reads and writes scoped by both the record ID and the authenticated `userId`.
 - Validate Kanban names and card descriptions at the API boundary. Board creation seeds `To do`, `In progress`, and `Done`; card moves are re-indexed by the server.
+- Kanban card request byte budgets must accommodate Unicode and JSON escapes for the full title/description limits in `src/lib/kanban-limits.ts`.
 - Keep Kanban board, column, and card reads and writes scoped to the authenticated user; moving a card must also verify that the target column belongs to the same owned board.
 - When deleting a note, remove its R2 objects as well as its D1 data.
 - When a D1 write fails after an R2 upload, delete the uploaded object to avoid orphaned files.
+- Concurrent uploads with the same client ID use separate attempt objects. Keep the D1 winner's bytes and remove losing attempt objects; repairs use conditional R2 writes.
 - Use migrations for schema changes. Do not edit deployed D1 schema manually.
 - Update `src/lib/types.ts`, schema, domain logic, route validation, migrations, backup behavior, and tests together when a persisted contract changes.
 
@@ -151,6 +155,7 @@ Keep route handlers thin. Parse requests, verify authentication and bindings, de
 - Preserve the current kinds: image, audio, video, PDF, text, document, archive, and other.
 - Authenticated attachment delivery supports `GET`, `HEAD`, private caching, ETags, and single byte ranges for media seeking.
 - Import uploads must exactly match the byte size declared in the validated backup manifest.
+- Enforce both short and long bodies before R2 commits in the Node proxy and Workers streaming paths. Completed staged backup objects are immutable to upload retries, including a delayed request finishing after finalization.
 
 ## Backup invariants
 

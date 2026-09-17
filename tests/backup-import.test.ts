@@ -404,6 +404,28 @@ describe('atomic backup import', () => {
     expect(await runtime.bucket.get(`${userId}/backup-imports/${prepared.importId}/files/0`)).toBeNull();
   });
 
+  it('does not let a delayed upload overwrite an attachment that was already finalized', async () => {
+    if (!runtime) throw new Error('Test runtime was not initialized');
+    const { d1, bucket } = runtime;
+    const prepared = await prepareBackupImport(getDb(d1), bucket, userId, backupManifest(), 'merge');
+    const blocked = blockFirstAttachmentPut(bucket);
+    const delayed = uploadPreparedBackupAttachment(
+      d1, blocked.bucket, userId, prepared.importId, 0, new Blob(['stale']).stream(), 5
+    );
+    await blocked.reached;
+    try {
+      await uploadPreparedBackupAttachment(
+        d1, bucket, userId, prepared.importId, 0, new Blob(['hello']).stream(), 5
+      );
+      await finalizeBackupImport(d1, bucket, userId, prepared.importId);
+    } finally {
+      blocked.release();
+    }
+    await delayed;
+    const key = await d1.prepare('SELECT r2_key AS key FROM attachments LIMIT 1').first<string>('key');
+    expect(await (await bucket.get(key!))?.text()).toBe('hello');
+  });
+
   it('rejects finalization without deleting existing data when an upload is missing', async () => {
     if (!runtime) throw new Error('Test runtime was not initialized');
     await runtime.d1.prepare(`

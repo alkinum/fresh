@@ -1,0 +1,7 @@
+export const MAX_KANBAN_CARD_TITLE_CHARACTERS = 200;
+export const MAX_KANBAN_CARD_DESCRIPTION_CHARACTERS = 10_000;
+
+// Reserve space for Unicode and JSON escapes, plus the movement fields and keys.
+export const MAX_KANBAN_CARD_JSON_BODY_BYTES = (
+  MAX_KANBAN_CARD_TITLE_CHARACTERS + MAX_KANBAN_CARD_DESCRIPTION_CHARACTERS
+) * 6 + 4096;

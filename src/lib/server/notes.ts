@@ -35,6 +35,8 @@ function tagColor(name: string): string {
 async function hydrateNotes(db: Database, userId: string, rows: Array<typeof notes.$inferSelect>): Promise<NoteDto[]> {
   if (rows.length === 0) return [];
   const noteIds = rows.map((note) => note.id);
+  // One JSON binding keeps a 100-note page below D1's 100-parameter limit.
+  const ownedIds = sql`(select value from json_each(${JSON.stringify(noteIds)}))`;
 
   const [tagRows, attachmentRows] = await Promise.all([
     db
@@ -48,11 +50,11 @@ async function hydrateNotes(db: Database, userId: string, rows: Array<typeof not
       })
       .from(noteTags)
       .innerJoin(tags, eq(noteTags.tagId, tags.id))
-      .where(and(inArray(noteTags.noteId, noteIds), eq(tags.userId, userId))),
+      .where(and(inArray(noteTags.noteId, ownedIds), eq(tags.userId, userId))),
     db
       .select()
       .from(attachments)
-      .where(and(inArray(attachments.noteId, noteIds), eq(attachments.userId, userId)))
+      .where(and(inArray(attachments.noteId, ownedIds), eq(attachments.userId, userId)))
       .orderBy(desc(attachments.createdAt))
   ]);
 
@@ -118,14 +120,14 @@ async function tagSyncStatements(
       SELECT json_extract(candidate.value, '$[0]'), ?, json_extract(candidate.value, '$[1]'),
         json_extract(candidate.value, '$[2]'), ?, ?, ?
       FROM json_each(?) AS candidate
-      WHERE EXISTS (SELECT 1 FROM notes WHERE id = ? AND user_id = ?)
+      WHERE EXISTS (SELECT 1 FROM notes WHERE id = ? AND user_id = ? AND content = ?)
       AND NOT EXISTS (
         SELECT 1 FROM tags
         WHERE user_id = ? AND name = json_extract(candidate.value, '$[1]')
       )
     `
         )
-        .bind(userId, now, now, now, JSON.stringify(candidates), noteId, userId, userId)
+        .bind(userId, now, now, now, JSON.stringify(candidates), noteId, userId, content, userId)
     );
   }
   statements.push(
@@ -134,11 +136,11 @@ async function tagSyncStatements(
         `
     DELETE FROM note_tags
     WHERE note_id = ? AND EXISTS (
-      SELECT 1 FROM notes WHERE id = ? AND user_id = ?
+      SELECT 1 FROM notes WHERE id = ? AND user_id = ? AND content = ?
     )
   `
       )
-      .bind(noteId, noteId, userId)
+      .bind(noteId, noteId, userId, content)
   );
 
   if (names.length > 0) {
@@ -150,20 +152,20 @@ async function tagSyncStatements(
         SELECT ?, min(tags.id)
         FROM json_each(?) AS requested
         INNER JOIN tags ON tags.user_id = ? AND tags.name = requested.value
-        WHERE EXISTS (SELECT 1 FROM notes WHERE id = ? AND user_id = ?)
+        WHERE EXISTS (SELECT 1 FROM notes WHERE id = ? AND user_id = ? AND content = ?)
         GROUP BY requested.value
       `
         )
-        .bind(noteId, JSON.stringify(names), userId, noteId, userId),
+        .bind(noteId, JSON.stringify(names), userId, noteId, userId, content),
       db.$client
         .prepare(
           `
         UPDATE tags SET last_note_modified_at = ?, updated_at = ?
         WHERE user_id = ? AND name IN (SELECT value FROM json_each(?))
-          AND EXISTS (SELECT 1 FROM notes WHERE id = ? AND user_id = ?)
+          AND EXISTS (SELECT 1 FROM notes WHERE id = ? AND user_id = ? AND content = ?)
       `
         )
-        .bind(now, now, userId, JSON.stringify(names), noteId, userId)
+        .bind(now, now, userId, JSON.stringify(names), noteId, userId, content)
     );
   }
   return statements;
@@ -315,7 +317,8 @@ export async function updateNote(
   db: Database,
   userId: string,
   id: string,
-  input: Partial<NoteInput>
+  input: Partial<NoteInput>,
+  expectedContent?: string
 ): Promise<NoteDto | undefined> {
   const [existing] = await db
     .select()
@@ -334,7 +337,7 @@ export async function updateNote(
   }
   const statements = content === undefined ? [] : await tagSyncStatements(db, userId, id, nextContent, timestamp);
 
-  await db.$client.batch([
+  const [updated] = await db.$client.batch([
     db.$client
       .prepare(
         `
@@ -346,7 +349,7 @@ export async function updateNote(
         color_indicator = coalesce(?, color_indicator),
         is_favorite = coalesce(?, is_favorite),
         updated_at = ?
-      WHERE id = ? AND user_id = ?
+      WHERE id = ? AND user_id = ? AND (? IS NULL OR content = ?)
     `
       )
       .bind(
@@ -360,10 +363,15 @@ export async function updateNote(
         input.isFavorite === undefined ? null : input.isFavorite ? 1 : 0,
         timestamp,
         id,
-        userId
+        userId,
+        expectedContent ?? null,
+        expectedContent ?? null
       ),
     ...statements
   ]);
+  if (expectedContent !== undefined && Number(updated.meta.changes ?? 0) === 0) {
+    throw new RequestError('Note changed while updating the task; refresh and try again', 409);
+  }
   return getNote(db, userId, id);
 }
 

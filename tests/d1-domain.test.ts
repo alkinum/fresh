@@ -10,6 +10,9 @@ import {
   updateKanbanCard
 } from '../src/lib/server/kanban';
 import { createNote, getNote, listNotes, listTags, updateNote } from '../src/lib/server/notes';
+import { PATCH as patchNote } from '../src/routes/api/notes/[id]/+server';
+import { POST as createCard } from '../src/routes/api/kanban/columns/[id]/cards/+server';
+import { PATCH as patchCard } from '../src/routes/api/kanban/cards/[id]/+server';
 
 const userId = 'user-1';
 
@@ -85,6 +88,70 @@ describe('D1 domain transactions', () => {
 
   afterEach(async () => {
     await runtime?.miniflare.dispose();
+  });
+
+  it('hydrates a full 100-note page without exceeding the D1 bound-parameter limit', async () => {
+    if (!runtime) throw new Error('Test runtime was not initialized');
+    const { d1, db } = runtime;
+    const ids = Array.from({ length: 100 }, (_, index) => `note-${index}`);
+    await d1.prepare(`
+      INSERT INTO notes
+      SELECT value, ?, 'Note', '# Note', '', '2026-09-16', '#5288e8', 0, 1, 1 FROM json_each(?)
+    `).bind(userId, JSON.stringify(ids)).run();
+    const page = await listNotes(db, { userId, limit: 100 });
+    expect(page.items).toHaveLength(100);
+    expect(page.totalItems).toBe(100);
+  });
+
+  it('rejects a stale task toggle without overwriting a concurrent edit or its tags', async () => {
+    if (!runtime) throw new Error('Test runtime was not initialized');
+    const { db, d1 } = runtime;
+    const note = await createNote(db, userId, { content: '# Tasks\n\n- [ ] Task\n\n#before' });
+    const changed = '# Tasks\n\n- [ ] Renamed task\n\n#after';
+    const racingD1 = {
+      prepare: d1.prepare.bind(d1),
+      batch: async (statements: D1PreparedStatement[]) => {
+        await updateNote(db, userId, note.id, { content: changed });
+        return d1.batch(statements);
+      }
+    } as D1Database;
+    const response = await patchNote({
+      locals: { user: { id: userId } }, params: { id: note.id }, platform: { env: { DB: racingD1 } },
+      request: new Request('https://fresh.test/note', {
+        method: 'PATCH', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ taskIndex: 0, taskChecked: true })
+      })
+    } as Parameters<typeof patchNote>[0]);
+    expect(response.status).toBe(409);
+    const current = await getNote(db, userId, note.id);
+    expect(current?.content).toBe(changed);
+    expect(current?.tags.map((tag) => tag.name)).toEqual(['after']);
+  });
+
+  it('creates and updates a card with the full allowed Unicode description', async () => {
+    if (!runtime) throw new Error('Test runtime was not initialized');
+    const { db, d1 } = runtime;
+    const board = await createKanbanBoard(db, userId, { name: 'Unicode' });
+    const description = '汉'.repeat(10_000);
+    const request = (method: string, text: string) => new Request('https://fresh.test/card', {
+      method, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Card', description: text })
+    });
+    const common = { locals: { user: { id: userId } }, platform: { env: { DB: d1 } } };
+    const created = await createCard({
+      ...common, params: { id: board.columns[0].id }, request: request('POST', description)
+    } as Parameters<typeof createCard>[0]);
+    expect(created.status).toBe(201);
+    const card = await created.json() as { id: string; description: string };
+    expect(card.description).toBe(description);
+    const updated = await patchCard({
+      ...common, params: { id: card.id }, request: request('PATCH', '字'.repeat(10_000))
+    } as Parameters<typeof patchCard>[0]);
+    expect(updated.status).toBe(200);
+    expect((await updated.json() as { description: string }).description).toBe('字'.repeat(10_000));
+    const oversized = await patchCard({
+      ...common, params: { id: card.id }, request: request('PATCH', '字'.repeat(10_001))
+    } as Parameters<typeof patchCard>[0]);
+    expect(oversized.status).toBe(400);
   });
 
   it('searches beyond the loaded page, combines filters, and treats wildcard characters literally', async () => {
