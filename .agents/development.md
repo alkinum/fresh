@@ -108,6 +108,7 @@ Keep route handlers thin. Parse requests, verify authentication and bindings, de
 - Keep `strict` TypeScript compatibility and avoid `any` unless a framework boundary genuinely requires it.
 - Use Svelte 5 runes and the patterns already present: `$props`, `$state`, `$derived`, and `$effect`.
 - Keep effects narrowly scoped and clean up timers, animation frames, and listeners.
+- Keep long note feeds virtualized and full Markdown DTO caches bounded by count and estimated bytes. Preserve focused controls and active media when rows leave the viewport. Rehydrate evicted bodies with owned, bounded batch reads, coalesce scroll-driven requests, and retain retryable errors without discarding loaded pages.
 - Prefer typed callback props for component communication. Do not introduce a global store for local page state.
 - Use keyed `{#each}` blocks for persistent records.
 - Keep browser-only APIs inside browser-executed functions or effects.

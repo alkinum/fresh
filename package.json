@@ -23,6 +23,7 @@
   "dependencies": {
     "@better-auth/passkey": "^1.7.5",
     "@lucide/svelte": "^1.47.0",
+    "@tanstack/svelte-virtual": "^3.13.39",
     "better-auth": "^1.7.5",
     "drizzle-orm": "^0.45.2",
     "fflate": "^0.8.3",

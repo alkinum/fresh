@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { SvelteSet } from 'svelte/reactivity';
   import {
     Download,
     ExternalLink,
@@ -30,13 +32,26 @@
   let {
     attachments,
     onDelete,
+    onRetain,
   }: {
     attachments: AttachmentDto[];
     onDelete: (attachment: AttachmentDto) => void;
+    onRetain?: (retain: boolean) => void;
   } = $props();
 
   let menu = $state<AttachmentMenuState | null>(null);
   let openPdfIds = $state<string[]>([]);
+  const playing = new SvelteSet<string>();
+  $effect(() => {
+    const ids = new Set(attachments.map((attachment) => attachment.id));
+    for (const id of playing) if (!ids.has(id)) playing.delete(id);
+    const remaining = openPdfIds.filter((id) => ids.has(id));
+    if (remaining.length !== openPdfIds.length) openPdfIds = remaining;
+  });
+  $effect(() => {
+    onRetain?.(!!menu || openPdfIds.length > 0 || playing.size > 0);
+  });
+  onDestroy(() => onRetain?.(false));
 
   function sizeLabel(size: number): string {
     if (size < 1024) return `${size} B`;
@@ -135,7 +150,14 @@
       {:else if attachment.kind === 'audio'}
         <div class="media-attachment" data-attachment-id={attachment.id}>
           <div class="attachment-label"><FileAudio size={16} /><span>{attachment.fileName}</span></div>
-          <audio src={attachment.url} controls preload="metadata"></audio>
+          <audio
+            src={attachment.url}
+            controls
+            preload="metadata"
+            onplay={() => playing.add(attachment.id)}
+            onpause={() => playing.delete(attachment.id)}
+            onended={() => playing.delete(attachment.id)}
+          ></audio>
           <button
             class="attachment-menu-trigger"
             aria-label={`Actions for ${attachment.fileName}`}
@@ -152,7 +174,14 @@
         <div class="video-attachment" data-attachment-id={attachment.id}>
           <!-- User-uploaded media does not include a separate captions track. -->
           <!-- svelte-ignore a11y_media_has_caption -->
-          <video src={attachment.url} controls preload="metadata"></video>
+          <video
+            src={attachment.url}
+            controls
+            preload="metadata"
+            onplay={() => playing.add(attachment.id)}
+            onpause={() => playing.delete(attachment.id)}
+            onended={() => playing.delete(attachment.id)}
+          ></video>
           <div class="attachment-row">
             <FileVideo size={16} />
             <span>{attachment.fileName}</span>
@@ -170,7 +199,11 @@
           </div>
         </div>
       {:else if attachment.kind === 'pdf'}
-        <details class="pdf-attachment" data-attachment-id={attachment.id} ontoggle={(event) => togglePdf(event, attachment.id)}>
+        <details
+          class="pdf-attachment"
+          data-attachment-id={attachment.id}
+          ontoggle={(event) => togglePdf(event, attachment.id)}
+        >
           <summary>
             <FileText size={16} />
             <span>{attachment.fileName}</span>

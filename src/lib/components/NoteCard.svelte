@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
   import { Copy as CopyIcon, Edit3, MoreHorizontal, Star, Tags, Trash2 } from '@lucide/svelte';
   import AttachmentGallery from '$lib/components/AttachmentGallery.svelte';
   import ContextMenu from '$lib/components/ContextMenu.svelte';
@@ -8,7 +8,7 @@
     contextMenuAtPointer,
     contextMenuReturnFocus,
     type ContextMenuInitialFocus,
-    type ContextMenuPlacement
+    type ContextMenuPlacement,
   } from '$lib/context-menu';
   import type { AttachmentDto, NoteDto, TagDto } from '$lib/types';
 
@@ -36,7 +36,8 @@
     onDeleteAttachment,
     onTag,
     onCopyTag,
-    onTaskToggle
+    onTaskToggle,
+    onRetain,
   }: {
     note: NoteDto;
     onFavorite: (note: NoteDto) => Promise<void> | void;
@@ -47,16 +48,23 @@
     onTag: (id: string) => void;
     onCopyTag: (tag: TagDto) => void;
     onTaskToggle: (note: NoteDto, taskIndex: number, checked: boolean) => Promise<void>;
+    onRetain?: (retain: boolean) => void;
   } = $props();
 
   let menu = $state<MenuState | null>(null);
   let taskPending = $state(false);
   let favoritePending = $state(false);
   let contentElement = $state<HTMLDivElement>();
+  let attachmentActive = $state(false);
+
+  $effect(() => {
+    onRetain?.(!!menu || taskPending || favoritePending || attachmentActive);
+  });
+  onDestroy(() => onRetain?.(false));
 
   function dateLabel(value: string): string {
     return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(
-      new Date(value)
+      new Date(value),
     );
   }
 
@@ -82,7 +90,7 @@
   function showNoteMenu(
     placement: ContextMenuPlacement,
     returnFocus: HTMLElement,
-    initialFocus: ContextMenuInitialFocus = 'first'
+    initialFocus: ContextMenuInitialFocus = 'first',
   ): void {
     menu = { kind: 'note', placement, returnFocus, initialFocus };
   }
@@ -129,7 +137,7 @@
       tag,
       placement: contextMenuAtPointer(event, button),
       returnFocus: contextMenuReturnFocus(button),
-      initialFocus: 'first'
+      initialFocus: 'first',
     };
   }
 
@@ -223,7 +231,11 @@
     </div>
   {/if}
 
-  <AttachmentGallery attachments={note.attachments} onDelete={(attachment) => onDeleteAttachment(note, attachment)} />
+  <AttachmentGallery
+    attachments={note.attachments}
+    onDelete={(attachment) => onDeleteAttachment(note, attachment)}
+    onRetain={(retain) => (attachmentActive = retain)}
+  />
 
   {#if note.tags.length > 0}
     <footer class="note-tags">

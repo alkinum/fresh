@@ -54,6 +54,7 @@ The schema is in `src/db/schema.ts`. Six migrations currently establish authenti
 | `/app` | Authenticated notes and Kanban workspace; first page loads 30 notes, tag summaries, and board summaries |
 | `GET /api/notes` | Paginated notes filtered by favorite, tag, and an optional search string (up to 200 characters) |
 | `POST /api/notes` | Create a note from Markdown content |
+| `POST /api/notes/batch` | Rehydrate up to 100 owned note IDs in request order; unavailable IDs are omitted |
 | `GET /api/notes/:id` | Return one owned note |
 | `PATCH /api/notes/:id` | Update content, color, favorite, or one rendered task state |
 | `DELETE /api/notes/:id` | Delete the note and its R2 attachments |
@@ -98,6 +99,10 @@ The task update compares its source content inside the atomic D1 batch. Concurre
 
 - Notes are ordered by favorite state, most recent update, and ID for deterministic pagination ties.
 - The initial and API default page size is 30; server limits cannot exceed 100.
+- The notebook uses `@tanstack/svelte-virtual` to render measured grid rows around the window viewport, with three rows of overscan. The responsive grid retains its 360px desktop target and single mobile column. ResizeObserver updates row heights after content, media, composer, and width changes.
+- A visit retains loaded note IDs and row geometry, but full DTOs use a 180-record / estimated 16 MiB LRU cache. Visible rows, the edited note, focus, open menus/PDFs, and playing media are protected while in use. These active records can exceed the soft cache budget; ID/geometry metadata grows with visited notes.
+- Scrolling back rehydrates missing DTOs through the owned batch endpoint. Only one restoration request runs at a time; subsequent range changes coalesce. Resetting the feed cancels stale reads, and an old read cannot replace a newer cached mutation. Missing/deleted records are removed and failed reads offer an explicit retry.
+- A sentinel preloads the next page within 800px of the end. Load more remains available for keyboard/manual use; an append error preserves existing cards and retries the same page. Filter changes reset the feed and scroll to the notes header when necessary.
 - Note hydration uses one JSON-bound ID set per related-data query, so a full 100-note page stays below D1's 100-parameter limit.
 - Favorite and tag filters are server queries.
 - Search runs on the server across the user's entire notebook: title, content, owned tag names, and owned attachment filenames. It uses a literal substring query, combines with favorite/tag filters, and paginates results. SQLite `lower` provides ASCII case folding; non-ASCII text matches literally. This is not an indexed full-text search.

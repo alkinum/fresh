@@ -24,7 +24,7 @@ The repository is prepared for open source: it has an Apache-2.0 license, public
 | Tags | Implemented | Extracted from Markdown, deterministic colors, counts, sidebar filtering, right-click filter/copy actions |
 | Search | Implemented | Debounced server search across the entire owned notebook, including title, Markdown, tags, and attachment filenames; combines with favorites/tags and paginates results |
 | Favorites | Implemented | Server filter, ordering, optimistic list updates |
-| Pagination | Implemented | 30-note default page with Load more; server maximum 100 per request |
+| Pagination | Implemented | Automatic infinite loading with a manual Load more fallback; measured virtual rows and bounded body cache; 30-note default page, maximum 100 per request |
 | Editor | Implemented | Formatting toolbar, Write/Preview modes with error recovery, auto-growing textarea, keyboard save, in-memory draft retention across workspace switches, and unsaved-change confirmation |
 | Attachments | Implemented | Multiple pending files, 95 MiB limit, R2 storage, ownership checks, consistent open/download/delete menus |
 | Kanban | Implemented | Owned boards, default and custom columns, editable cards, drag/drop and menu movement, responsive horizontal workspace |
@@ -56,13 +56,13 @@ The production GitHub OAuth callback is `https://fresh.pwp.workers.dev/api/auth/
 
 ## Validation and test baseline
 
-The 2026-09-16–17 dependency refresh checks all direct packages against current stable registry releases, with TypeScript intentionally constrained to `^6.0.3` (the latest stable 6.x). Key versions are Svelte 5.57.0, SvelteKit 2.70.3, Vite 8.3.0, Better Auth/Passkey 1.7.5, Markdown-it 15.0.2, Zod 4.6.5, Vitest/coverage 5.0.1, Wrangler 4.133.0. The separate Markdown-it types package is removed in favor of upstream public types. `development.md` explains the remaining narrow compatibility overrides, removed Vitest/Sharp overrides, and Node.js requirements.
+The 2026-09-16–17 dependency refresh checks all direct packages against current stable registry releases, with TypeScript intentionally constrained to `^6.0.3` (the latest stable 6.x). Key versions are Svelte 5.57.0, SvelteKit 2.70.3, Vite 8.3.0, Better Auth/Passkey 1.7.5, Markdown-it 15.0.2, Zod 4.6.5, Vitest/coverage 5.0.1, Wrangler 4.133.0, and TanStack Svelte Virtual 3.13.39. The separate Markdown-it types package is removed in favor of upstream public types. `development.md` explains the remaining narrow compatibility overrides, removed Vitest/Sharp overrides, and Node.js requirements.
 
 At this snapshot, the following pass locally:
 
 - `npm run check` with 0 Svelte/TypeScript errors and 0 warnings.
 - `npm run lint`.
-- `npm test -- --maxWorkers=1 --testTimeout=30000 --hookTimeout=30000` with 10 files and 71 tests, including disposable local D1/R2 and actual Workers streaming execution. Longer timeouts accommodate the shared development host; earlier attempts encountered local proxy connection failures and timeouts.
+- `npm test -- --maxWorkers=1 --testTimeout=30000 --hookTimeout=30000` with 11 files and 75 tests, including disposable local D1/R2 and actual Workers streaming execution. Longer timeouts accommodate the shared development host; earlier attempts encountered local proxy connection failures and timeouts.
 - `npm run build` for the Cloudflare production target.
 - Clean `npm ci`, a valid `npm ls --all` dependency tree, and `npm audit` with zero vulnerabilities after the dependency refresh. `npm outdated` reports TypeScript 7 (intentionally excluded) and the anomalous Node types `latest` tag, which points to 22.20.3 while Fresh uses the newer 26.6.1 from `ts6.0`.
 
@@ -77,6 +77,7 @@ Unit coverage currently exercises:
 - Bounded JSON parsing for large Unicode note requests.
 - The maximum 100-note page within D1's parameter limit, task/content edit races without stale tag updates, and full-length Unicode Kanban card requests.
 - Concurrent attachment upload retries, delayed backup uploads after finalization, exact-length enforcement in Node and Workers, and long supplementary-Unicode backup filenames.
+- Long-feed cache count/byte eviction, protected active records, replacement accounting, and batched rehydration order, size limits, and per-user isolation.
 
 Manual browser verification has covered desktop light, desktop dark, and `390x844` mobile layouts, including the public landing page, login waves, logo depth, sidebar selection, editor auto-growth, Passkey management, and overflow behavior. Context-menu verification covers menu-button and native right-click entry points for notes, attachments, tags, board tabs and headers, columns, and cards; per-item command sets and disabled edge movement; Arrow Up/Down, Home/End, Escape, and focus restoration; preserved native menus for links and selected text; and viewport flipping and clamping without document overflow in the production container. A virtual WebAuthn authenticator has also verified registration, sign-out, discoverable Passkey sign-in, `/app` return, and test-credential cleanup.
 
@@ -88,12 +89,14 @@ The first production release reran check, lint, all 58 tests, and the production
 
 The 2026-09-16 code/dependency review fixes six correctness issues involving concurrent attachment and backup uploads, stale task writes, full-page D1 hydration, Unicode Kanban requests, and truncated uploads. See `review-2026-09-16.md` for triggers and regression coverage. The updated production preview on Node 26.5.0 passes public Markdown/math/highlighting preview and save, signed-session access, authenticated note save/search/task persistence, and virtual Passkey registration, sign-out, discoverable sign-in, and deletion with Better Auth 1.7.5. Desktop light/dark and 390x844 mobile screenshots were inspected; the completed browser pass reported no runtime errors or mobile overflow. An initial Passkey attempt hit a transient local Miniflare proxy `EADDRNOTAVAIL`; the complete rerun passed without code or configuration changes. The disposable local review account was removed afterwards. Real GitHub OAuth, physical passkeys, and production load were not exercised.
 
+The September 17 long-list pass loads 3,000 real local D1 notes through the final Worker build. Chrome mounts at most 22 cards during traversal (5 in the sampled mobile view); the JS heap after GC is 12.14 MiB at the end versus 4.53 MiB initially. Desktop light/dark and mobile dark show no overflow or runtime errors. Error/retry, serialized body rehydration, task persistence, menu keyboard behavior, full-library search/edit, and uninterrupted audio across recycling and workspace switches pass. Detailed measurements and local-environment caveats are in `review-2026-09-16.md`; this is not a production-load or low-end-device guarantee.
 
 ## Known scope and limitations
 
 - Theme follows the operating system. There is no in-app theme selector.
 - GitHub remains the account-bootstrap provider. Email/password and other OAuth providers are disabled or not configured.
 - Search uses SQLite substring matching, with ASCII case folding and literal non-ASCII matching. It is not an indexed full-text search; very large libraries may need a dedicated index.
+- The virtual notebook mounts nearby rows and active interactions. Browser Find only sees mounted content; use notebook search for the full library. Cache limits are soft for visible/edited/playing records, and lightweight IDs/geometry still grow with the visited feed. Server pagination remains offset-based and is not a snapshot across concurrent writes.
 - Editor drafts survive switching between Notes and Kanban during a visit, but are not persisted across reloads or browser restarts.
 - Tags are generated from note content; there is no standalone tag editor or rename/delete workflow.
 - Notes are private to an account. Sharing, collaboration, public links, and multi-user note editing are not implemented.

@@ -265,6 +265,17 @@ export async function getNote(db: Database, userId: string, id: string): Promise
   return row ? (await hydrateNotes(db, userId, [row]))[0] : undefined;
 }
 
+export async function getNotesByIds(db: Database, userId: string, ids: string[]): Promise<NoteDto[]> {
+  if (ids.length === 0) return [];
+  if (ids.length > 100) throw new RequestError('Too many requested notes', 400);
+  const rows = await db.select().from(notes).where(and(
+    eq(notes.userId, userId),
+    inArray(notes.id, sql`(select value from json_each(${JSON.stringify(ids)}))`)
+  ));
+  const hydrated = new Map((await hydrateNotes(db, userId, rows)).map((note) => [note.id, note]));
+  return [...new Set(ids)].flatMap((id) => hydrated.has(id) ? [hydrated.get(id)!] : []);
+}
+
 export async function createNote(db: Database, userId: string, input: NoteInput): Promise<NoteDto> {
   const id = crypto.randomUUID();
   const now = new Date();

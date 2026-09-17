@@ -11,6 +11,7 @@ import {
 } from '../src/lib/server/kanban';
 import { createNote, getNote, listNotes, listTags, updateNote } from '../src/lib/server/notes';
 import { PATCH as patchNote } from '../src/routes/api/notes/[id]/+server';
+import { POST as batchNotes } from '../src/routes/api/notes/batch/+server';
 import { POST as createCard } from '../src/routes/api/kanban/columns/[id]/cards/+server';
 import { PATCH as patchCard } from '../src/routes/api/kanban/cards/[id]/+server';
 
@@ -126,6 +127,31 @@ describe('D1 domain transactions', () => {
     const current = await getNote(db, userId, note.id);
     expect(current?.content).toBe(changed);
     expect(current?.tags.map((tag) => tag.name)).toEqual(['after']);
+  });
+
+  it('rehydrates 100 owned notes in requested order and rejects invalid batch requests', async () => {
+    if (!runtime) throw new Error('Test runtime was not initialized');
+    const { db, d1 } = runtime;
+    const ids = Array.from({ length: 100 }, () => crypto.randomUUID());
+    await d1.prepare(`
+      INSERT INTO notes
+      SELECT value, ?, 'Note', '# Note', '', '2026-09-17', '#5288e8', 0, 1, 1 FROM json_each(?)
+    `).bind(userId, JSON.stringify(ids)).run();
+    const foreign = await createNote(db, 'another-user', { content: '# Private' });
+    const request = (requested: string[], authenticated = true) => batchNotes({
+      locals: { user: authenticated ? { id: userId } : null }, platform: { env: { DB: d1 } },
+      request: new Request('https://fresh.test/api/notes/batch', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids: requested })
+      })
+    } as Parameters<typeof batchNotes>[0]);
+    const fullPage = await request([...ids].reverse());
+    expect(fullPage.status).toBe(200);
+    expect((await fullPage.json() as Array<{ id: string }>).map((note) => note.id)).toEqual([...ids].reverse());
+    const mixed = await request([ids[0], foreign.id, crypto.randomUUID(), ids[0]]);
+    expect((await mixed.json() as Array<{ id: string }>).map((note) => note.id)).toEqual([ids[0]]);
+    expect((await request([...ids, foreign.id])).status).toBe(400);
+    expect((await request(['invalid'])).status).toBe(400);
+    expect((await request(ids, false)).status).toBe(401);
   });
 
   it('creates and updates a card with the full allowed Unicode description', async () => {

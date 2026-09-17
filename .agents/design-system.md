@@ -72,7 +72,7 @@ Secondary colors are semantic, not decorative: green for success, coral/red for 
 
 Desktop uses a 288px shell column and a flexible workspace. The sidebar is inset by 12px, fills the viewport height minus its margins, and is one rounded shell. Workspace content is capped at 1440px.
 
-An unframed notebook heading and New note action precede the composer. The composer is the first work surface, followed by a compact notes header and a responsive grid. Note cards use `auto-fill` with a minimum target width of 360px. Avoid wrapping major page sections in extra cards.
+An unframed notebook heading and New note action precede the composer. The composer is the first work surface, followed by a compact notes header and a responsive grid. Note cards use a minimum target width of 360px. The saved notebook virtualizes measured rows while preserving this geometry and single-column mobile layout; the small landing demo uses a regular grid. Keep focused controls, active media, and open item interactions mounted when they leave the viewport. Avoid wrapping major page sections in extra cards.
 
 Responsive rules:
 

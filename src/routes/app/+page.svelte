@@ -7,21 +7,33 @@
   import KanbanWorkspace from '$lib/components/KanbanWorkspace.svelte';
   import NoteCard from '$lib/components/NoteCard.svelte';
   import NoteComposer from '$lib/components/NoteComposer.svelte';
+  import VirtualNoteGrid from '$lib/components/VirtualNoteGrid.svelte';
   import PasskeyDialog from '$lib/components/PasskeyDialog.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import { authClient } from '$lib/auth-client';
+  import { NoteCache } from '$lib/note-cache';
   import type { AttachmentDto, KanbanBoardSummaryDto, NoteDto, PaginatedResult, TagDto } from '$lib/types';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
 
-  let notes = $state<NoteDto[]>([]);
+  let noteIds = $state<string[]>([]);
+  const noteCache = new NoteCache();
+  let cachedNotes = $state.raw<ReadonlyMap<string, NoteDto>>(noteCache.snapshot());
+  let visibleIds: string[] = [];
+  let feedRevision = $state(0);
+  let restoreError = $state('');
+  let restoreController: AbortController | undefined;
+  let loadingMore = $state(false);
+  let nearEnd = $state(false);
+  let retryPage = 1;
+  let retryAppend = false;
   let tags = $state<TagDto[]>([]);
   let kanbanBoards = $state<KanbanBoardSummaryDto[]>([]);
   let pagination = $state({
     currentPage: 1,
     totalPages: 0,
-    totalItems: 0
+    totalItems: 0,
   });
   let activeView = $state<'all' | 'favorites'>('all');
   let activeWorkspace = $state<'notes' | 'kanban'>('notes');
@@ -51,7 +63,8 @@
 
   $effect(() => {
     const nextBoards = data.kanbanBoards ?? [];
-    notes = data.notes?.items ?? [];
+    const initialNotes = data.notes?.items ?? [];
+    untrack(() => resetNotes(initialNotes));
     tags = data.tags ?? [];
     kanbanBoards = nextBoards;
     const selectedBoardId = untrack(() => activeBoardId);
@@ -61,8 +74,117 @@
     pagination = {
       currentPage: data.notes?.currentPage ?? 1,
       totalPages: data.notes?.totalPages ?? 0,
-      totalItems: data.notes?.totalItems ?? 0
+      totalItems: data.notes?.totalItems ?? 0,
     };
+  });
+
+  function cacheNotes(items: NoteDto[]): void {
+    noteCache.put(items);
+    cachedNotes = noteCache.snapshot();
+  }
+
+  function resetNotes(items: NoteDto[]): void {
+    restoreController?.abort();
+    restoreController = undefined;
+    visibleIds = [];
+    restoreError = '';
+    noteCache.clear();
+    noteIds = items.map((note) => note.id);
+    cacheNotes(items);
+    feedRevision += 1;
+  }
+
+  function removeNote(id: string): void {
+    noteIds = noteIds.filter((item) => item !== id);
+    noteCache.delete(id);
+    cachedNotes = noteCache.snapshot();
+  }
+
+  function protectNotes(): void {
+    noteCache.protect(editing ? [...visibleIds, editing.id] : visibleIds);
+    cachedNotes = noteCache.snapshot();
+  }
+
+  $effect(() => {
+    void editing;
+    untrack(protectNotes);
+  });
+
+  function visibleNotes(ids: string[]): void {
+    if (ids.length === visibleIds.length && ids.every((id, index) => id === visibleIds[index])) return;
+    visibleIds = ids;
+    protectNotes();
+    void restoreNotes();
+  }
+
+  async function restoreNotes(): Promise<void> {
+    // Coalesce rapid range changes into a single in-flight read. Aborting each
+    // scroll event still makes the server do work and can starve visible rows.
+    if (restoreController) return;
+    restoreError = '';
+    const missing = visibleIds.filter((id) => !noteCache.has(id)).slice(0, 100);
+    if (!missing.length) return;
+    const controller = new AbortController();
+    restoreController = controller;
+    let failed = false;
+    try {
+      const response = await fetch('/api/notes/batch', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: missing }),
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(await responseError(response));
+      const items = (await response.json()) as NoteDto[];
+      if (controller.signal.aborted) return;
+      // A task/favorite response may have updated the cache while this read was pending.
+      cacheNotes(items.filter((item) => !noteCache.has(item.id) && noteIds.includes(item.id)));
+      const returned = new Set(items.map((item) => item.id));
+      const removed = missing.filter((id) => !returned.has(id) && noteIds.includes(id));
+      if (removed.length) {
+        noteIds = noteIds.filter((id) => !removed.includes(id));
+        updateTotalItems(-removed.length);
+      }
+    } catch (error) {
+      failed = true;
+      if (!controller.signal.aborted) restoreError = error instanceof Error ? error.message : 'Could not reload notes';
+    } finally {
+      if (restoreController === controller) restoreController = undefined;
+      if (
+        !controller.signal.aborted &&
+        (!failed || !missing.some((id) => visibleIds.includes(id))) &&
+        visibleIds.some((id) => noteIds.includes(id) && !noteCache.has(id))
+      )
+        void restoreNotes();
+    }
+  }
+
+  function watchEnd(node: HTMLElement) {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        nearEnd = entry.isIntersecting;
+      },
+      { rootMargin: '800px' },
+    );
+    observer.observe(node);
+    return {
+      destroy() {
+        observer.disconnect();
+        nearEnd = false;
+      },
+    };
+  }
+
+  $effect(() => {
+    if (
+      activeWorkspace === 'notes' &&
+      nearEnd &&
+      !loading &&
+      !loadError &&
+      pagination.currentPage < pagination.totalPages
+    ) {
+      untrack(() => void loadNotes(pagination.currentPage + 1, true));
+    }
   });
 
   let workspaceTitle = $derived(
@@ -70,7 +192,7 @@
       ? 'Favorites'
       : activeTagId
         ? `#${tags.find((tag) => tag.id === activeTagId)?.name ?? 'Tag'}`
-        : 'Your notebook'
+        : 'Your notebook',
   );
 
   beforeNavigate((navigation) => {
@@ -97,6 +219,7 @@
     notesAbortController?.abort();
     notesRequestId += 1;
     loading = true;
+    loadingMore = false;
     loadError = '';
     searchTimer = setTimeout(() => void loadNotes(), 250);
   }
@@ -148,7 +271,7 @@
     pagination = {
       currentPage: totalPages === 0 ? 1 : Math.min(pagination.currentPage, totalPages),
       totalPages,
-      totalItems
+      totalItems,
     };
   }
 
@@ -175,17 +298,29 @@
     const requestId = ++notesRequestId;
     notesAbortController = controller;
     loading = true;
+    loadingMore = append;
     loadError = '';
+    retryPage = page;
+    retryAppend = append;
     try {
       const response = await fetch(`/api/notes?${filterQuery(page)}`, { signal: controller.signal });
       if (!response.ok) throw new Error(await responseError(response));
       const result = (await response.json()) as PaginatedResult<NoteDto>;
       if (requestId !== notesRequestId) return;
-      notes = append ? [...new Map([...notes, ...result.items].map((note) => [note.id, note])).values()] : result.items;
+      if (append) {
+        noteIds = [...new Set([...noteIds, ...result.items.map((note) => note.id)])];
+        cacheNotes(result.items);
+      } else {
+        const header = document.querySelector('.notes-header');
+        if (header && header.getBoundingClientRect().top < 0) {
+          window.scrollTo({ top: header.getBoundingClientRect().top + window.scrollY, behavior: 'instant' });
+        }
+        resetNotes(result.items);
+      }
       pagination = {
         currentPage: result.currentPage,
         totalPages: result.totalPages,
-        totalItems: result.totalItems
+        totalItems: result.totalItems,
       };
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return;
@@ -197,6 +332,7 @@
 
   onDestroy(() => {
     notesAbortController?.abort();
+    restoreController?.abort();
     clearTimeout(searchTimer);
     clearToastTimer();
   });
@@ -233,13 +369,14 @@
     const matchesFilter =
       (activeView !== 'favorites' || note.isFavorite) &&
       (!activeTagId || note.tags.some((tag) => tag.id === activeTagId));
-    const index = notes.findIndex((item) => item.id === note.id);
+    const index = noteIds.indexOf(note.id);
     if (!matchesFilter && index >= 0) {
-      notes.splice(index, 1);
+      removeNote(note.id);
       updateTotalItems(-1);
-    } else if (matchesFilter && index >= 0) notes[index] = note;
-    else if (matchesFilter) notes = [note, ...notes];
-    notes = [...notes];
+    } else if (matchesFilter) {
+      if (index < 0) noteIds = [note.id, ...noteIds];
+      cacheNotes([note]);
+    }
     editing = null;
     if (created && matchesFilter) updateTotalItems(1);
     showToast(created ? 'Note saved' : 'Note updated');
@@ -252,14 +389,14 @@
       const response = await fetch(`/api/notes/${note.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ isFavorite: !note.isFavorite })
+        body: JSON.stringify({ isFavorite: !note.isFavorite }),
       });
       if (!response.ok) throw new Error(await responseError(response));
       const updated = (await response.json()) as NoteDto;
       if (activeView === 'favorites' && !updated.isFavorite) {
-        notes = notes.filter((item) => item.id !== note.id);
+        removeNote(note.id);
         updateTotalItems(-1);
-      } else notes = notes.map((item) => (item.id === note.id ? updated : item));
+      } else cacheNotes([updated]);
       void loadNotes();
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not update favorite', 'error');
@@ -292,12 +429,12 @@
       const response = await fetch(`/api/notes/${note.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ taskIndex, taskChecked: checked })
+        body: JSON.stringify({ taskIndex, taskChecked: checked }),
       });
       if (!response.ok) throw new Error(await responseError(response));
 
       const updated = (await response.json()) as NoteDto;
-      notes = notes.map((item) => (item.id === note.id ? updated : item));
+      cacheNotes([updated]);
       if (editing?.id === note.id) editing = updated;
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not update task', 'error');
@@ -309,14 +446,14 @@
     if (
       !(await confirmation?.ask(
         'Delete this note?',
-        `“${note.title}” and its attachments will be permanently deleted.`
+        `“${note.title}” and its attachments will be permanently deleted.`,
       ))
     )
       return;
     try {
       const response = await fetch(`/api/notes/${note.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(await responseError(response));
-      notes = notes.filter((item) => item.id !== note.id);
+      removeNote(note.id);
       updateTotalItems(-1);
       if (editing?.id === note.id) editing = null;
       showToast('Note deleted');
@@ -333,11 +470,8 @@
     try {
       const response = await fetch(`/api/attachments/${attachment.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(await responseError(response));
-      notes = notes.map((item) =>
-        item.id === note.id
-          ? { ...item, attachments: item.attachments.filter((file) => file.id !== attachment.id) }
-          : item
-      );
+      const current = noteCache.peek(note.id) ?? note;
+      cacheNotes([{ ...current, attachments: current.attachments.filter((file) => file.id !== attachment.id) }]);
       showToast('Attachment deleted');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not delete attachment', 'error');
@@ -481,39 +615,57 @@
           </label>
         </div>
 
-        {#if loading}
+        {#if loading && !loadingMore}
           <p class="notes-feedback" role="status"><LoaderCircle class="spin" size={16} /> Loading notes…</p>
         {/if}
         {#if loadError}
           <div class="notes-feedback error" role="alert">
-            <span>{loadError}</span><button class="secondary-button" onclick={() => void loadNotes()}>Try again</button>
+            <span>{loadError}</span><button
+              class="secondary-button"
+              onclick={() => void loadNotes(retryPage, retryAppend)}>Try again</button
+            >
           </div>
-        {:else if notes.length > 0}
-          <div class="notes-grid" aria-busy={loading} inert={loading}>
-            {#each notes as note (note.id)}
-              <NoteCard
-                {note}
-                onFavorite={toggleFavorite}
-                onEdit={editNote}
-                onCopy={copyNote}
-                onDelete={(item) => void deleteNote(item)}
-                onDeleteAttachment={(item, attachment) => void deleteAttachment(item, attachment)}
-                onTag={changeTag}
-                onCopyTag={copyTag}
-                onTaskToggle={toggleTask}
-              />
-            {/each}
+        {/if}
+        {#if noteIds.length > 0}
+          <div aria-busy={loading && !loadingMore} inert={loading && !loadingMore}>
+            {#key feedRevision}
+              <VirtualNoteGrid
+                ids={noteIds}
+                notes={cachedNotes}
+                active={activeWorkspace === 'notes'}
+                onVisible={visibleNotes}
+                error={restoreError}
+                onRetry={() => void restoreNotes()}
+              >
+                {#snippet children(note, onRetain)}
+                  <NoteCard
+                    {note}
+                    {onRetain}
+                    onFavorite={toggleFavorite}
+                    onEdit={editNote}
+                    onCopy={copyNote}
+                    onDelete={(item) => void deleteNote(item)}
+                    onDeleteAttachment={(item, attachment) => void deleteAttachment(item, attachment)}
+                    onTag={changeTag}
+                    onCopyTag={copyTag}
+                    onTaskToggle={toggleTask}
+                  />
+                {/snippet}
+              </VirtualNoteGrid>
+            {/key}
           </div>
           {#if pagination.currentPage < pagination.totalPages}
-            <button
-              class="load-more"
-              disabled={loading}
-              onclick={() => void loadNotes(pagination.currentPage + 1, true)}
-            >
-              {loading ? 'Loading...' : 'Load more'}
-            </button>
+            <div use:watchEnd>
+              <button
+                class="load-more"
+                disabled={loading}
+                onclick={() => void loadNotes(pagination.currentPage + 1, true)}
+              >
+                {loading ? 'Loading...' : 'Load more'}
+              </button>
+            </div>
           {/if}
-        {:else if !loading}
+        {:else if !loading && !loadError}
           <div class="empty-state">
             <div class="empty-glyph">
               {#if search}<Search size={24} />{:else if activeView === 'favorites'}<Star size={24} />{:else}<FileText

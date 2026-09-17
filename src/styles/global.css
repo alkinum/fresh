@@ -1439,6 +1439,26 @@ summary:focus-visible {
   gap: 14px;
 }
 
+.virtual-notes {
+  position: relative;
+  overflow-anchor: none;
+}
+
+.virtual-note-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: grid;
+  align-items: start;
+  gap: 14px;
+}
+
+.note-placeholder {
+  padding: 18px;
+  color: var(--muted);
+}
+
 .workspace-inner.kanban-mode {
   width: min(1600px, 100%);
 }
