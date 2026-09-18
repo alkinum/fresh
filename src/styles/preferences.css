@@ -1,0 +1,221 @@
+:root[data-theme='light'] {
+  font-family: 'Avenir Next', Avenir, 'Segoe UI', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  color-scheme: light dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --bg: #edf5f8;
+  --workspace-start: #edf5f8;
+  --workspace-end: #e9f2f6;
+  --sidebar: #f8fbfc;
+  --surface: #fbfdff;
+  --surface-raised: #f1f6fa;
+  --surface-hover: #e8f1f6;
+  --surface-editor: #fbfdff;
+  --surface-toolbar: #f8fbfd;
+  --surface-subtle: #edf3f7;
+  --surface-media: #f3f7fa;
+  --surface-media-deep: #e8eef3;
+  --surface-dialog-head: #f7fafc;
+  --border: #cbdbe4;
+  --border-soft: #dce8ee;
+  --text: #263246;
+  --muted: #5d6e82;
+  --faint: #687b8e;
+  --text-strong: #2f4157;
+  --text-body: #40566c;
+  --primary: #5288e8;
+  --action: #346bc7;
+  --primary-hover: #2e61b8;
+  --primary-on: #f8fbff;
+  --primary-soft: rgba(82, 136, 232, 0.14);
+  --primary-ring: rgba(79, 140, 255, 0.14);
+  --danger: #df6676;
+  --danger-text: #a94455;
+  --danger-soft: #ffe8eb;
+  --success: #32a57b;
+  --success-text: #216e54;
+  --success-soft: #dff5eb;
+  --disabled-text: #596878;
+  --disabled-bg: #dce7ef;
+  --glass-panel: rgba(251, 253, 255, 0.86);
+  --glass-panel-strong: rgba(251, 253, 255, 0.92);
+  --glass-control: rgba(237, 245, 248, 0.72);
+  --glass-fill: rgba(231, 242, 255, 0.54);
+  --glass-fill-strong: rgba(231, 242, 255, 0.62);
+  --glass-action: rgba(255, 255, 255, 0.42);
+  --glass-border: rgba(255, 255, 255, 0.72);
+  --glass-border-strong: rgba(255, 255, 255, 0.8);
+  --glass-highlight: rgba(255, 255, 255, 0.86);
+  --glass-highlight-soft: rgba(255, 255, 255, 0.52);
+  --glass-lowlight: rgba(82, 136, 232, 0.08);
+  --glass-tint: rgba(255, 255, 255, 0.28);
+  --glass-tint-strong: rgba(255, 255, 255, 0.46);
+  --glass-rim: rgba(255, 255, 255, 0.84);
+  --glass-rim-soft: rgba(82, 136, 232, 0.2);
+  --glass-specular: rgba(255, 255, 255, 0.74);
+  --glass-chroma: rgba(110, 174, 255, 0.2);
+  --glass-depth: rgba(55, 82, 113, 0.16);
+  --nav-active-bg: rgba(185, 215, 255, 0.34);
+  --nav-active-border: rgba(255, 255, 255, 0.72);
+  --nav-active-shadow: rgba(70, 106, 150, 0.14);
+  --logo-glow: rgba(82, 136, 232, 0.42);
+  --login-bg-start: #fbfdff;
+  --login-bg-mid: #f2f8ff;
+  --login-bg-end: #eaf3ff;
+  --login-overlay: rgba(255, 255, 255, 0.7);
+  --wave-one: #c5dcff;
+  --wave-two: #8eb8fb;
+  --wave-three: #5288e8;
+  --inline-code-text: #315e9f;
+  --inline-code-bg: #eaf2fa;
+  --code-bg: #26384f;
+  --code-text: #edf4fb;
+  --quote-text: #526b88;
+  --table-bg: rgba(251, 253, 255, 0.72);
+  --table-head-bg: #eaf2f8;
+  --table-head-text: #334a65;
+  --task-border: #9eb5c9;
+  --task-bg: rgba(251, 253, 255, 0.9);
+  --task-done: #8291a1;
+  --scrim: rgba(54, 70, 89, 0.38);
+  --scroll-track: #edf3f6;
+  --scroll-thumb: #b8c8d3;
+  --iframe-bg: #fbfdff;
+  --radius-panel: 18px;
+  --radius-dialog: 22px;
+  --radius-shell: 24px;
+  --radius-control: 12px;
+  --radius-icon: 10px;
+  --radius-small: 8px;
+  --shadow-sm: 0 8px 22px rgba(70, 94, 119, 0.1);
+  --shadow: 0 18px 46px rgba(70, 94, 119, 0.14);
+  --shadow-lg: 0 30px 90px rgba(70, 94, 119, 0.2);
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0e1724;
+  --workspace-start: #0e1724;
+  --workspace-end: #111d2b;
+  --sidebar: rgba(18, 30, 44, 0.96);
+  --surface: #172536;
+  --surface-raised: #203247;
+  --surface-hover: #253a51;
+  --surface-editor: #132131;
+  --surface-toolbar: #19293a;
+  --surface-subtle: #223447;
+  --surface-media: #1a2a3c;
+  --surface-media-deep: #101c2a;
+  --surface-dialog-head: #1b2b3d;
+  --border: #3a526b;
+  --border-soft: #2b4057;
+  --text: #e8f1fb;
+  --muted: #a6b6c9;
+  --faint: #7f91a6;
+  --text-strong: #e4edf8;
+  --text-body: #bac9d9;
+  --primary: #6e9ff5;
+  --action: #6e9ff5;
+  --primary-hover: #8ab2f8;
+  --primary-on: #0f1c2d;
+  --primary-soft: rgba(110, 159, 245, 0.18);
+  --primary-ring: rgba(110, 159, 245, 0.25);
+  --danger: #ff8b9b;
+  --danger-text: #ffb0bb;
+  --danger-soft: rgba(223, 102, 118, 0.17);
+  --success: #5bc49a;
+  --success-text: #88ddb9;
+  --success-soft: rgba(50, 165, 123, 0.17);
+  --disabled-text: #7f91a3;
+  --disabled-bg: #2a3948;
+  --glass-panel: rgba(22, 36, 52, 0.84);
+  --glass-panel-strong: rgba(22, 36, 52, 0.94);
+  --glass-control: rgba(38, 58, 79, 0.72);
+  --glass-fill: rgba(67, 107, 158, 0.18);
+  --glass-fill-strong: rgba(67, 107, 158, 0.24);
+  --glass-action: rgba(133, 176, 230, 0.12);
+  --glass-border: rgba(184, 215, 255, 0.16);
+  --glass-border-strong: rgba(184, 215, 255, 0.22);
+  --glass-highlight: rgba(255, 255, 255, 0.13);
+  --glass-highlight-soft: rgba(255, 255, 255, 0.09);
+  --glass-lowlight: rgba(5, 13, 24, 0.2);
+  --glass-tint: rgba(67, 107, 158, 0.12);
+  --glass-tint-strong: rgba(67, 107, 158, 0.22);
+  --glass-rim: rgba(193, 224, 255, 0.3);
+  --glass-rim-soft: rgba(110, 159, 245, 0.26);
+  --glass-specular: rgba(255, 255, 255, 0.17);
+  --glass-chroma: rgba(102, 178, 255, 0.2);
+  --glass-depth: rgba(0, 0, 0, 0.3);
+  --nav-active-bg: rgba(78, 130, 204, 0.24);
+  --nav-active-border: rgba(170, 207, 255, 0.2);
+  --nav-active-shadow: rgba(2, 9, 18, 0.32);
+  --logo-glow: rgba(110, 159, 245, 0.34);
+  --login-bg-start: #142337;
+  --login-bg-mid: #101d2d;
+  --login-bg-end: #0c1623;
+  --login-overlay: rgba(32, 52, 76, 0.28);
+  --wave-one: #416fae;
+  --wave-two: #4f83d3;
+  --wave-three: #6fa0ed;
+  --inline-code-text: #a9c9ff;
+  --inline-code-bg: #20354d;
+  --code-bg: #0f1a28;
+  --code-text: #dce9f8;
+  --quote-text: #b1c7df;
+  --table-bg: rgba(20, 34, 50, 0.76);
+  --table-head-bg: #21364d;
+  --table-head-text: #d9e8f8;
+  --task-border: #607b98;
+  --task-bg: #17283a;
+  --task-done: #8295aa;
+  --scrim: rgba(4, 10, 18, 0.66);
+  --scroll-track: #111c29;
+  --scroll-thumb: #3a5068;
+  --iframe-bg: #f2f6fa;
+  --shadow-sm: 0 8px 22px rgba(2, 8, 16, 0.26);
+  --shadow: 0 18px 46px rgba(2, 8, 16, 0.34);
+  --shadow-lg: 0 30px 90px rgba(1, 5, 12, 0.48);
+  color-scheme: dark;
+}
+:root[data-accent='green'] {
+  --accent-hue: 158;
+  --accent-saturation: 52%;
+  --accent-action-lightness: 32%;
+}
+:root[data-accent='violet'] {
+  --accent-hue: 258;
+  --accent-saturation: 56%;
+}
+:root[data-accent='rose'] {
+  --accent-hue: 340;
+  --accent-saturation: 51%;
+}
+:root[data-accent='orange'] {
+  --accent-hue: 27;
+  --accent-saturation: 65%;
+}
+:root[data-accent]:not([data-accent='blue']) {
+  --primary: light-dark(hsl(var(--accent-hue) var(--accent-saturation) 45%), hsl(var(--accent-hue) 68% 73%));
+  --action: light-dark(
+    hsl(var(--accent-hue) var(--accent-saturation) var(--accent-action-lightness, 37%)),
+    hsl(var(--accent-hue) 68% 73%)
+  );
+  --primary-hover: light-dark(hsl(var(--accent-hue) var(--accent-saturation) 31%), hsl(var(--accent-hue) 74% 81%));
+  --primary-soft: color-mix(in srgb, var(--primary) 14%, transparent);
+  --primary-ring: color-mix(in srgb, var(--primary) 20%, transparent);
+  --nav-active-bg: color-mix(in srgb, var(--primary) 16%, transparent);
+  --nav-active-border: color-mix(in srgb, var(--primary) 20%, var(--surface));
+  --glass-fill: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  --glass-fill-strong: color-mix(in srgb, var(--primary) 15%, var(--surface));
+  --glass-rim-soft: color-mix(in srgb, var(--primary) 22%, transparent);
+  --glass-chroma: color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+:root[data-theme='light'] .brand-mark img {
+  filter: saturate(0.96) contrast(1.03);
+}
+:root[data-theme='dark'] .brand-mark img {
+  filter: saturate(0.9) brightness(0.94) contrast(1.08);
+}

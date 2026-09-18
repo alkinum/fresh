@@ -5,7 +5,7 @@
 - Preserve per-user isolation. Every note, tag, attachment, Kanban board, column, card, and backup operation must be authorized with the authenticated `userId` on the server.
 - Keep credentials, private keys, local databases, backups, browser state, test captures, and generated deployment state out of Git.
 - Validate untrusted request and backup data at the server boundary. Use Zod for structured payloads.
-- Keep source comments and application UI copy in English.
+- Keep source comments and translation source keys in English. User-facing UI goes through the request-scoped translation context and ships complete Simplified Chinese, English, Korean, and Japanese messages. Do not translate user-authored notes, tags, board names, or existing column/card titles.
 - Use the existing SvelteKit, Svelte 5, Drizzle, Better Auth, D1, and R2 patterns before adding dependencies or abstractions.
 - Do not push, deploy, mutate production data, or change remote infrastructure without explicit user authorization.
 - Do not overwrite unrelated work in a dirty worktree.
@@ -97,6 +97,8 @@ Vite reads `.env`; Wrangler reads `.dev.vars`. Real values belong only in ignore
 - `src/db/schema.ts` is the database schema source of truth.
 - `src/lib/types.ts` owns DTOs shared across the server and UI.
 - `src/styles/global.css` is the current visual token and component-style source of truth.
+- `src/styles/preferences.css` supplies explicit light/dark overrides and theme accents; `src/styles/settings.css` owns the account settings layout. Keep explicit theme tokens synchronized with the automatic theme tokens.
+- `src/lib/preferences.ts`, `src/lib/messages.ts`, and `src/lib/i18n.svelte.ts` own validated account preferences, the translation catalog, and per-layout reactive localization. Never share mutable locale state between server requests.
 - `migrations/` contains committed D1 migrations and Drizzle metadata.
 - `public/` contains the exported Fresh logo, favicon, maskable icon set, and web manifest.
 - `tests/` contains unit coverage for pure domain logic.
@@ -120,6 +122,7 @@ Keep route handlers thin. Parse requests, verify authentication and bindings, de
 
 - Authentication is established in `src/hooks.server.ts`; `/app` redirects anonymous users to `/login` and protected APIs return `401`.
 - Keep passkey registration session-bound. GitHub OAuth establishes the account before a user can register a passkey.
+- Profile and preference writes must derive ownership from `locals.user.id`. Avatars use owned R2 paths, a 2 MiB server body cap, PNG/JPEG/WebP signature checks, and conditional profile updates; remove failed/losing uploads and replaced owned objects. Profile/preferences are outside the notebook backup contract.
 - Passkey changes must preserve WebAuthn relying-party derivation from the canonical `BETTER_AUTH_URL` and require HTTPS outside localhost.
 - Never trust an ID by itself. Query owned records with both record ID and `locals.user.id`.
 - Never expose raw R2 keys to clients. DTOs expose authenticated application URLs.
@@ -204,6 +207,7 @@ For UI changes, also verify with a real browser:
 - No horizontal overflow, clipping, overlap, or unexpected layout shift.
 - Keyboard focus, disabled, loading, empty, error, and reduced-motion behavior where relevant.
 - For animation, inspect computed movement or screenshots rather than relying only on source review.
+- For settings/localization, check all four languages, immediate preference changes and failure rollback, refresh/SSR persistence, keyboard dismissal, and the embedded Passkey/backup flows. Verify explicit light and dark preferences against the opposite OS preference.
 
 Add or update tests when changing Markdown parsing, title derivation, task mutation, attachments, backup cryptography, manifest validation, or other pure domain logic. Broaden coverage when changing shared contracts.
 

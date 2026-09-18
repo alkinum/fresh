@@ -50,13 +50,17 @@
   --glass-highlight: rgba(255, 255, 255, 0.86);
   --glass-highlight-soft: rgba(255, 255, 255, 0.52);
   --glass-lowlight: rgba(82, 136, 232, 0.08);
+  --glass-tint: rgba(255, 255, 255, 0.28);
+  --glass-tint-strong: rgba(255, 255, 255, 0.46);
+  --glass-rim: rgba(255, 255, 255, 0.84);
+  --glass-rim-soft: rgba(82, 136, 232, 0.2);
+  --glass-specular: rgba(255, 255, 255, 0.74);
+  --glass-chroma: rgba(110, 174, 255, 0.2);
+  --glass-depth: rgba(55, 82, 113, 0.16);
   --nav-active-bg: rgba(185, 215, 255, 0.34);
   --nav-active-border: rgba(255, 255, 255, 0.72);
   --nav-active-shadow: rgba(70, 106, 150, 0.14);
-  --logo-bg: #dceaff;
-  --logo-border: rgba(255, 255, 255, 0.82);
-  --logo-ring: rgba(82, 136, 232, 0.1);
-  --logo-shadow: rgba(38, 102, 214, 0.24);
+  --logo-glow: rgba(82, 136, 232, 0.42);
   --login-bg-start: #fbfdff;
   --login-bg-mid: #f2f8ff;
   --login-bg-end: #eaf3ff;
@@ -137,13 +141,17 @@
     --glass-highlight: rgba(255, 255, 255, 0.13);
     --glass-highlight-soft: rgba(255, 255, 255, 0.09);
     --glass-lowlight: rgba(5, 13, 24, 0.2);
+    --glass-tint: rgba(67, 107, 158, 0.12);
+    --glass-tint-strong: rgba(67, 107, 158, 0.22);
+    --glass-rim: rgba(193, 224, 255, 0.3);
+    --glass-rim-soft: rgba(110, 159, 245, 0.26);
+    --glass-specular: rgba(255, 255, 255, 0.17);
+    --glass-chroma: rgba(102, 178, 255, 0.2);
+    --glass-depth: rgba(0, 0, 0, 0.3);
     --nav-active-bg: rgba(78, 130, 204, 0.24);
     --nav-active-border: rgba(170, 207, 255, 0.2);
     --nav-active-shadow: rgba(2, 9, 18, 0.32);
-    --logo-bg: #203b5d;
-    --logo-border: rgba(170, 207, 255, 0.22);
-    --logo-ring: rgba(110, 159, 245, 0.16);
-    --logo-shadow: rgba(3, 10, 20, 0.46);
+    --logo-glow: rgba(110, 159, 245, 0.34);
     --login-bg-start: #142337;
     --login-bg-mid: #101d2d;
     --login-bg-end: #0c1623;
@@ -205,7 +213,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin: 6px 0 24px;
+  margin: 4px 0 20px;
 }
 
 .workspace-heading > div {
@@ -213,7 +221,7 @@ button:disabled {
 }
 .workspace-heading h1 {
   margin: 4px 0 0;
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 750;
   line-height: 1.25;
   overflow-wrap: anywhere;
@@ -468,14 +476,6 @@ summary:focus-visible {
   transform: translateY(0);
 }
 
-.liquid-glass-defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
 .login-page {
   position: relative;
   isolation: isolate;
@@ -580,7 +580,6 @@ summary:focus-visible {
 .login-brand .brand-mark {
   width: 42px;
   height: 42px;
-  border-radius: 14px;
 }
 
 .login-panel .login-brand {
@@ -592,7 +591,6 @@ summary:focus-visible {
 .login-panel .login-brand .brand-mark {
   width: 86px;
   height: 86px;
-  border-radius: 25px;
   transform: rotate(-5deg);
 }
 
@@ -759,31 +757,33 @@ summary:focus-visible {
 }
 
 .app-shell {
+  --shadow-sm: 0 3px 12px var(--glass-lowlight);
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: 288px minmax(0, 1fr);
+  grid-template-columns: 244px minmax(0, 1fr);
 }
 
 .sidebar {
   position: sticky;
-  top: 12px;
+  top: 10px;
   z-index: 30;
-  height: calc(100dvh - 24px);
+  height: calc(100dvh - 20px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin: 12px;
-  border-radius: var(--radius-shell);
+  margin: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
   background: var(--sidebar);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 
 .brand-row {
-  min-height: 70px;
+  min-height: 62px;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 0 18px;
+  gap: 9px;
+  padding: 0 14px;
 }
 
 .brand-row strong {
@@ -792,40 +792,17 @@ summary:focus-visible {
 }
 
 .brand-mark {
-  position: relative;
-  isolation: isolate;
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
   display: block;
-  overflow: hidden;
-  padding: 2px;
-  border: 1px solid var(--logo-border);
-  border-radius: var(--radius-control);
-  background: radial-gradient(circle at 28% 12%, var(--glass-highlight), transparent 42%), var(--logo-bg);
-  box-shadow:
-    inset 0 1px 0 var(--glass-highlight),
-    0 0 0 3px var(--logo-ring),
-    0 10px 24px var(--logo-shadow);
-}
-
-.brand-mark::after {
-  content: '';
-  position: absolute;
-  inset: 1px;
-  z-index: 2;
-  border: 1px solid var(--glass-highlight-soft);
-  border-radius: calc(var(--radius-control) - 2px);
-  pointer-events: none;
+  filter: drop-shadow(0 4px 14px var(--logo-glow));
 }
 
 .brand-mark img {
-  position: relative;
-  z-index: 1;
   width: 100%;
   height: 100%;
   display: block;
-  border-radius: calc(var(--radius-control) - 3px);
   object-fit: cover;
   filter: saturate(0.96) contrast(1.03);
 }
@@ -836,25 +813,28 @@ summary:focus-visible {
 
 .primary-nav {
   display: grid;
-  gap: 5px;
-  padding: 16px 12px 10px;
+  gap: 3px;
+  padding: 4px 9px 10px;
 }
 
 .primary-nav button,
 .tag-nav button,
 .board-nav button {
   width: 100%;
-  min-height: 39px;
+  min-height: 34px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 11px;
+  gap: 9px;
+  padding: 6px 9px;
   border: 1px solid transparent;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-small);
   background: transparent;
   color: var(--muted);
   cursor: pointer;
   text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
   transition:
     background 160ms ease,
     border-color 160ms ease,
@@ -879,7 +859,7 @@ summary:focus-visible {
   box-shadow:
     inset 0 1px 0 var(--glass-highlight),
     inset 0 -1px 0 var(--glass-lowlight),
-    0 8px 20px var(--nav-active-shadow);
+    0 2px 5px var(--glass-lowlight);
   backdrop-filter: blur(15px) saturate(145%);
   -webkit-backdrop-filter: blur(15px) saturate(145%);
 }
@@ -893,7 +873,9 @@ summary:focus-visible {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 14px 12px;
+  margin: 0 9px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-soft);
 }
 
 .section-label {
@@ -964,7 +946,7 @@ summary:focus-visible {
 
 .tag-count {
   color: var(--faint);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .empty-tags {
@@ -974,62 +956,37 @@ summary:focus-visible {
 }
 
 .sidebar-footer {
-  padding: 12px;
-}
-
-.sidebar-account-tools {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  margin-bottom: 7px;
-}
-
-.sidebar-account-tools button {
-  min-width: 0;
-  min-height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-control);
-  color: var(--muted);
-  background: transparent;
-  cursor: pointer;
-  font-size: 10px;
-  font-weight: 700;
-  transition:
-    color 140ms ease,
-    border-color 140ms ease,
-    background 140ms ease,
-    transform 140ms ease;
-}
-
-.sidebar-account-tools button:hover {
-  border-color: var(--glass-border);
-  color: var(--text);
-  background: var(--glass-control);
+  padding: 9px;
 }
 
 .user-row {
+  width: 100%;
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 8px;
-  border-radius: var(--radius-panel);
-  border: 1px solid var(--glass-border);
-  background: var(--glass-control);
-  box-shadow:
-    inset 0 1px 0 var(--glass-highlight),
-    var(--shadow-sm);
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
+  background: var(--surface-subtle);
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-row:hover {
+  border-color: var(--border);
+  background: var(--surface-hover);
+}
+
+.user-row > svg {
+  flex: 0 0 auto;
+  color: var(--faint);
 }
 
 .user-row img,
 .user-avatar {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   flex: 0 0 auto;
   border-radius: var(--radius-control);
   object-fit: cover;
@@ -1107,7 +1064,7 @@ summary:focus-visible {
 .workspace-inner {
   width: min(1440px, 100%);
   margin: 0 auto;
-  padding: 26px 28px 48px;
+  padding: 24px 24px 40px;
 }
 
 .mobile-header {
@@ -1218,7 +1175,6 @@ summary:focus-visible {
 .toolbar-upload > svg {
   position: relative;
   z-index: 1;
-  filter: url(#fresh-attachment-file-lens);
 }
 
 .toolbar-upload input {
@@ -1606,7 +1562,7 @@ summary:focus-visible {
   overflow: hidden;
   margin: 0;
   color: var(--text);
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1615,7 +1571,7 @@ summary:focus-visible {
 .kanban-board-title p {
   margin: 3px 0 0;
   color: var(--faint);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .kanban-columns {
@@ -1677,7 +1633,7 @@ summary:focus-visible {
   overflow: hidden;
   margin: 0;
   color: var(--text-strong);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1734,6 +1690,11 @@ summary:focus-visible {
   box-shadow: 0 0 0 2px var(--primary-ring);
 }
 
+.kanban-card-list.composing:empty {
+  min-height: 0;
+  padding-block: 0;
+}
+
 .kanban-card {
   position: relative;
   min-width: 0;
@@ -1743,7 +1704,7 @@ summary:focus-visible {
   background: var(--surface);
   box-shadow:
     inset 0 1px 0 var(--glass-highlight),
-    0 5px 14px var(--nav-active-shadow);
+    0 2px 5px var(--glass-lowlight);
   cursor: grab;
   transition:
     transform 150ms ease,
@@ -1789,7 +1750,7 @@ summary:focus-visible {
   color: var(--text-strong);
   background: transparent;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.45;
   overflow-wrap: anywhere;
@@ -1807,7 +1768,7 @@ summary:focus-visible {
   overflow: hidden;
   margin: 6px 4px 0 20px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.55;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -1824,7 +1785,7 @@ summary:focus-visible {
 
 .kanban-card time {
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .kanban-add-card {
@@ -1839,7 +1800,7 @@ summary:focus-visible {
   color: var(--muted);
   background: transparent;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   text-align: left;
 }
 
@@ -1850,28 +1811,26 @@ summary:focus-visible {
 
 .kanban-add-card-form {
   display: grid;
-  gap: 7px;
-  margin: 7px;
-  padding: 7px;
-  border-radius: var(--radius-control);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  gap: 9px;
+  margin: 2px 9px 10px;
 }
 
 .kanban-add-card-form textarea {
   width: 100%;
-  min-height: 72px;
-  padding: 7px 8px;
-  border: 0;
-  border-radius: var(--radius-icon);
+  min-height: 86px;
+  max-height: 240px;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
   resize: vertical;
   color: var(--text);
-  background: var(--surface-subtle);
-  font-size: 11px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  font-size: 13px;
   line-height: 1.5;
 }
 
-.kanban-add-card-form > div,
+.kanban-add-card-actions,
 .kanban-new-column form > div {
   display: flex;
   align-items: center;
@@ -1880,9 +1839,60 @@ summary:focus-visible {
 
 .kanban-add-card-form .primary-button,
 .kanban-new-column .primary-button {
-  min-height: 31px;
+  min-height: 32px;
   padding: 6px 10px;
-  font-size: 10px;
+  font-size: 12px;
+  border-radius: var(--radius-small);
+  box-shadow: none;
+}
+
+.kanban-add-card-form textarea::placeholder {
+  color: var(--faint);
+}
+.kanban-add-card-form textarea:disabled {
+  opacity: 0.65;
+}
+.kanban-cancel-card {
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+}
+.kanban-cancel-card:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.kanban-add-card-hint {
+  margin-left: auto;
+  padding-right: 2px;
+  color: var(--faint);
+  font-size: 11px;
+}
+.kanban-add-card-error {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.kanban-add-card:disabled {
+  opacity: 0.5;
+}
+.kanban-add-card-actions .primary-button {
+  min-width: 100px;
+}
+
+@media (pointer: coarse) {
+  .kanban-add-card-actions .primary-button,
+  .kanban-cancel-card {
+    min-height: 44px;
+  }
+  .kanban-add-card-hint {
+    display: none;
+  }
 }
 
 .kanban-new-column {
@@ -2902,7 +2912,6 @@ summary:focus-visible {
   box-shadow:
     inset 0 1px 0 var(--glass-highlight),
     0 6px 14px var(--primary-soft);
-  filter: url(#fresh-backup-file-lens);
 }
 
 .file-picker-copy {
@@ -3317,7 +3326,6 @@ summary:focus-visible {
   .mobile-brand .brand-mark {
     width: 30px;
     height: 30px;
-    border-radius: 10px;
   }
 
   .workspace-inner {
@@ -3552,7 +3560,7 @@ summary:focus-visible {
   .primary-nav button,
   .tag-nav button,
   .board-nav button,
-  .sidebar-account-tools button,
+  .user-row,
   .segmented-control button,
   .primary-button,
   .context-menu [role='menuitem'],
@@ -3610,7 +3618,126 @@ summary:focus-visible {
   }
 }
 
+/*
+ * Compact lens treatment inspired by Aave's live-DOM glass: translucent depth,
+ * a bright rim, a directional specular pass, and a restrained chromatic edge.
+ * The browser's backdrop filter supplies the live background refraction while
+ * the layered CSS remains safe to fall back from on browsers without it.
+ */
+.liquid-glass-surface {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--glass-rim);
+  background:
+    radial-gradient(120% 170% at 4% -30%, var(--glass-specular) 0%, transparent 52%),
+    linear-gradient(145deg, var(--glass-tint-strong), var(--glass-tint) 58%, var(--glass-rim-soft));
+  box-shadow:
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -1px 0 var(--glass-lowlight),
+    0 10px 26px var(--glass-depth);
+  backdrop-filter: blur(18px) saturate(145%) contrast(1.04);
+  -webkit-backdrop-filter: blur(18px) saturate(145%) contrast(1.04);
+}
+
+.liquid-glass-surface::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    112deg,
+    var(--glass-specular) 0%,
+    transparent 22%,
+    transparent 68%,
+    var(--glass-chroma) 100%
+  );
+  opacity: 0.64;
+  pointer-events: none;
+}
+
+.liquid-glass-surface::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    102deg,
+    transparent 0 16%,
+    var(--glass-rim-soft) 22%,
+    transparent 29% 72%,
+    var(--glass-chroma) 78%,
+    transparent 84%
+  );
+  opacity: 0.26;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.primary-nav button.active.liquid-glass-surface,
+.tag-nav button.active.liquid-glass-surface,
+.board-nav button.active.liquid-glass-surface,
+.board-tabs > button.active.liquid-glass-surface,
+.segmented-control button.active.liquid-glass-surface,
+.dialog-form .file-picker.liquid-glass-surface,
+.settings-nav button.active.liquid-glass-surface {
+  border-color: var(--glass-rim);
+  background:
+    radial-gradient(120% 170% at 4% -30%, var(--glass-specular) 0%, transparent 52%),
+    linear-gradient(145deg, var(--glass-tint-strong), var(--glass-tint) 58%, var(--glass-rim-soft));
+  box-shadow:
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -1px 0 var(--glass-lowlight),
+    0 10px 26px var(--glass-depth);
+  backdrop-filter: blur(18px) saturate(145%) contrast(1.04);
+  -webkit-backdrop-filter: blur(18px) saturate(145%) contrast(1.04);
+}
+
+.liquid-glass-surface:hover {
+  border-color: var(--glass-rim);
+}
+
+.user-row.liquid-glass-surface:hover {
+  background:
+    radial-gradient(120% 170% at 4% -30%, var(--glass-specular) 0%, transparent 52%),
+    linear-gradient(145deg, var(--glass-tint-strong), var(--glass-tint) 58%, var(--glass-rim-soft));
+  box-shadow:
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -1px 0 var(--glass-lowlight),
+    0 12px 28px var(--glass-depth);
+}
+
 @media (prefers-reduced-transparency: reduce) {
+  .liquid-glass-surface {
+    border-color: var(--border-soft);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .primary-nav button.active.liquid-glass-surface,
+  .tag-nav button.active.liquid-glass-surface,
+  .board-nav button.active.liquid-glass-surface,
+  .board-tabs > button.active.liquid-glass-surface,
+  .segmented-control button.active.liquid-glass-surface,
+  .dialog-form .file-picker.liquid-glass-surface,
+  .settings-nav button.active.liquid-glass-surface,
+  .user-row.liquid-glass-surface:hover {
+    border-color: var(--border-soft);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .liquid-glass-surface::before,
+  .liquid-glass-surface::after {
+    display: none;
+  }
+
   .login-panel {
     background: var(--surface);
     backdrop-filter: none;
@@ -3636,6 +3763,34 @@ summary:focus-visible {
 }
 
 @media (prefers-contrast: more) {
+  .liquid-glass-surface {
+    border-color: currentColor;
+    background: var(--surface);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .primary-nav button.active.liquid-glass-surface,
+  .tag-nav button.active.liquid-glass-surface,
+  .board-nav button.active.liquid-glass-surface,
+  .board-tabs > button.active.liquid-glass-surface,
+  .segmented-control button.active.liquid-glass-surface,
+  .dialog-form .file-picker.liquid-glass-surface,
+  .settings-nav button.active.liquid-glass-surface,
+  .user-row.liquid-glass-surface:hover {
+    border-color: currentColor;
+    background: var(--surface);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .liquid-glass-surface::before,
+  .liquid-glass-surface::after {
+    display: none;
+  }
+
   .context-menu {
     outline: 1px solid currentColor;
     box-shadow: none;

@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
   import { createWindowVirtualizer, defaultRangeExtractor, type Range } from '@tanstack/svelte-virtual';
   import { SvelteSet } from 'svelte/reactivity';
   import { tick, untrack, type Snippet } from 'svelte';
@@ -145,8 +149,8 @@
           <div class="note-card note-placeholder" style:min-height={`${row.size}px`} aria-busy={!error}>
             {#if error}
               <p>{error}</p>
-              <button class="secondary-button" onclick={onRetry}>Try again</button>
-            {:else}<span>Loading note…</span>{/if}
+              <button class="secondary-button" onclick={onRetry}>{t('Try again')}</button>
+            {:else}<span>{t('Loading note…')}</span>{/if}
           </div>
         {/if}
       {/each}

@@ -26,6 +26,7 @@ const defaultColumns = ['To do', 'In progress', 'Done'];
 interface CreateBoardInput {
   name: string;
   color?: string;
+  columnNames?: readonly [string, string, string];
 }
 
 interface UpdateBoardInput {
@@ -184,7 +185,7 @@ export async function createKanbanBoard(
   const id = crypto.randomUUID();
   const timestamp = Math.floor(now.getTime() / 1000);
   const color = input.color ?? KANBAN_BOARD_COLORS[Number(stats?.count ?? 0) % KANBAN_BOARD_COLORS.length];
-  const columnValues = defaultColumns.map((name, position) => [crypto.randomUUID(), name, position]);
+  const columnValues = (input.columnNames ?? defaultColumns).map((name, position) => [crypto.randomUUID(), name, position]);
   const [created] = await db.$client.batch([
     db.$client.prepare(`
       INSERT INTO kanban_boards (id, user_id, name, color, position, created_at, updated_at)

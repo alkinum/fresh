@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
   import type { Passkey } from '@better-auth/passkey';
   import { Fingerprint, KeyRound, LoaderCircle, Plus, ShieldCheck, Trash2, X } from '@lucide/svelte';
   import { authClient } from '$lib/auth-client';
@@ -8,10 +12,14 @@
 
   let {
     open,
+    embedded = false,
+    onBusyChange,
     onClose,
-    onError
+    onError,
   }: {
     open: boolean;
+    embedded?: boolean;
+    onBusyChange?: (busy: boolean) => void;
     onClose: () => void;
     onError: (message: string) => void;
   } = $props();
@@ -24,6 +32,9 @@
   let supported = $state(true);
   let loadGeneration = 0;
   let openCycleActive = false;
+  $effect(() => {
+    onBusyChange?.(registering || deletingId !== null);
+  });
 
   $effect(() => {
     if (!open) {
@@ -50,10 +61,10 @@
   }
 
   function dateLabel(value: Date | string): string {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(i18n.locale, {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     }).format(new Date(value));
   }
 
@@ -65,7 +76,7 @@
       if (generation !== loadGeneration || !open) return;
       passkeys = result.data ?? [];
     } catch (error) {
-      if (generation === loadGeneration && open) onError(errorMessage(error, 'Could not load passkeys'));
+      if (generation === loadGeneration && open) onError(errorMessage(error, t('Could not load passkeys')));
     } finally {
       if (generation === loadGeneration) loading = false;
     }
@@ -76,14 +87,14 @@
     registering = true;
     try {
       const result = await authClient.passkey.addPasskey({
-        name: name.trim() || 'Fresh passkey',
-        authenticatorAttachment: 'platform'
+        name: name.trim() || t('Fresh passkey'),
+        authenticatorAttachment: 'platform',
       });
       if (result.error) throw result.error;
       name = '';
       await loadPasskeys();
     } catch (error) {
-      onError(errorMessage(error, 'Could not add passkey'));
+      onError(errorMessage(error, t('Could not add passkey')));
     } finally {
       registering = false;
     }
@@ -92,8 +103,10 @@
   async function deletePasskey(passkey: Passkey): Promise<void> {
     if (
       !(await confirmation?.ask(
-        'Delete this passkey?',
-        `“${passkey.name || 'Passkey'}” will no longer sign you in. You can still use GitHub or another registered passkey.`
+        t('Delete this passkey?'),
+        t('“{name}” will no longer sign you in. You can still use GitHub or another registered passkey.', {
+          name: passkey.name || t('Passkey'),
+        }),
       ))
     )
       return;
@@ -103,7 +116,7 @@
       if (result.error) throw result.error;
       passkeys = passkeys.filter((item) => item.id !== passkey.id);
     } catch (error) {
-      onError(errorMessage(error, 'Could not delete passkey'));
+      onError(errorMessage(error, t('Could not delete passkey')));
     } finally {
       deletingId = null;
     }
@@ -116,13 +129,13 @@
 </script>
 
 {#if open}
-  <div class="dialog-layer" role="presentation">
-    <button class="dialog-scrim" aria-label="Close passkeys" onclick={dismiss}></button>
+  <div class={embedded ? 'settings-embedded' : 'dialog-layer'} role="presentation">
+    {#if !embedded}<button class="dialog-scrim" aria-label={t('Close passkeys')} onclick={dismiss}></button>{/if}
     <div
-      use:modalFocus={{ onDismiss: dismiss }}
+      use:modalFocus={{ active: !embedded, onDismiss: dismiss }}
       class="dialog passkey-dialog"
-      role="dialog"
-      aria-modal="true"
+      role={embedded ? 'region' : 'dialog'}
+      aria-modal={embedded ? undefined : true}
       aria-labelledby="passkey-title"
       aria-busy={loading || registering || deletingId !== null}
     >
@@ -130,16 +143,18 @@
       <header>
         <div class="dialog-title">
           <Fingerprint size={19} />
-          <h2 id="passkey-title">Passkeys</h2>
+          <h2 id="passkey-title">{t('Passkeys')}</h2>
         </div>
-        <button class="icon-button" aria-label="Close" title="Close" onclick={dismiss}><X size={18} /></button>
+        {#if !embedded}<button class="icon-button" aria-label={t('Close')} title={t('Close')} onclick={dismiss}
+            ><X size={18} /></button
+          >{/if}
       </header>
 
       <div class="passkey-intro">
         <span class="passkey-intro-icon" aria-hidden="true"><ShieldCheck size={19} /></span>
         <div>
-          <strong>Sign in without a password</strong>
-          <p>Passkeys stay protected by your device and work with Face ID, Touch ID, or a security key.</p>
+          <strong>{t('Sign in without a password')}</strong>
+          <p>{t('Passkeys stay protected by your device and work with Face ID, Touch ID, or a security key.')}</p>
         </div>
       </div>
 
@@ -150,43 +165,48 @@
           void addPasskey();
         }}
       >
-        <label for="passkey-name">Passkey name</label>
+        <label for="passkey-name">{t('Passkey name')}</label>
         <div>
           <input
             id="passkey-name"
             data-dialog-initial-focus
             bind:value={name}
             maxlength="80"
-            placeholder="This device"
+            placeholder={t('This device')}
             autocomplete="off"
             disabled={!supported || registering}
           />
           <button class="primary-button" type="submit" disabled={!supported || registering}>
             {#if registering}<LoaderCircle class="spin" size={15} />{:else}<Plus size={15} />{/if}
-            <span>{registering ? 'Adding...' : 'Add passkey'}</span>
+            <span>{registering ? t('Adding...') : t('Add passkey')}</span>
           </button>
         </div>
       </form>
 
       {#if !supported}
-        <p class="passkey-unavailable">Passkeys require a supported browser and a secure connection.</p>
+        <p class="passkey-unavailable">{t('Passkeys require a supported browser and a secure connection.')}</p>
       {:else if loading}
-        <div class="passkey-loading" role="status"><LoaderCircle class="spin" size={17} /> Loading passkeys...</div>
+        <div class="passkey-loading" role="status">
+          <LoaderCircle class="spin" size={17} />
+          {t('Loading passkeys...')}
+        </div>
       {:else if passkeys.length > 0}
-        <ul class="passkey-list" aria-label="Registered passkeys">
+        <ul class="passkey-list" aria-label={t('Registered passkeys')}>
           {#each passkeys as passkey (passkey.id)}
             <li class="passkey-row">
               <span class="passkey-row-icon" aria-hidden="true"><KeyRound size={17} /></span>
               <div>
-                <strong>{passkey.name || 'Passkey'}</strong>
+                <strong>{passkey.name || t('Passkey')}</strong>
                 <span
-                  >{passkey.backedUp ? 'Synced passkey' : 'Device passkey'} - Added {dateLabel(passkey.createdAt)}</span
+                  >{passkey.backedUp ? t('Synced passkey') : t('Device passkey')} · {t('Added {date}', {
+                    date: dateLabel(passkey.createdAt),
+                  })}</span
                 >
               </div>
               <button
                 class="icon-button danger"
-                aria-label={`Delete ${passkey.name || 'passkey'}`}
-                title="Delete passkey"
+                aria-label={t('Delete {name}', { name: passkey.name || t('Passkey') })}
+                title={t('Delete passkey')}
                 disabled={deletingId === passkey.id}
                 onclick={() => void deletePasskey(passkey)}
               >
@@ -198,7 +218,7 @@
       {:else}
         <div class="passkey-empty">
           <Fingerprint size={20} />
-          <span>No passkeys registered yet</span>
+          <span>{t('No passkeys registered yet')}</span>
         </div>
       {/if}
     </div>

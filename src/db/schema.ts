@@ -19,6 +19,13 @@ export const user = sqliteTable("user", {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
 
+export const userPreferences = sqliteTable('user_preferences', {
+  userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
+  language: text('language').notNull().default('auto'),
+  theme: text('theme').notNull().default('auto'),
+  accent: text('accent').notNull().default('blue')
+});
+
 export const session = sqliteTable("session", {
   id: text("id").primaryKey(),
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),

@@ -1,3 +1,4 @@
+import { redirect } from '@sveltejs/kit';
 import { deriveNoteTitle, extractTags, renderNoteBody } from '$lib/server/markdown';
 import type { NoteDto } from '$lib/types';
 import type { PageServerLoad } from './$types';
@@ -18,7 +19,9 @@ function tagColor(name: string): string {
   return `hsl(${hash % 360} 58% 64%)`;
 }
 
-export const load: PageServerLoad = () => {
+export const load: PageServerLoad = ({ locals }) => {
+  if (locals.user) redirect(303, '/app');
+
   const now = new Date().toISOString();
   const landingDemoNote: NoteDto = {
     id: 'landing-demo-note',
@@ -36,9 +39,9 @@ export const load: PageServerLoad = () => {
       color: tagColor(name),
       count: 1,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     })),
-    attachments: []
+    attachments: [],
   };
 
   return { landingDemoNote };

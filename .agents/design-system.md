@@ -23,18 +23,18 @@ The landing workflow demo must reuse the production `NoteComposer` and `NoteCard
 
 ## Source of truth
 
-Global design tokens and current component styles live in `src/styles/global.css`. Reuse semantic variables rather than adding hardcoded light-only colors.
+Global design tokens and current component styles live in `src/styles/global.css`. `preferences.css` applies explicit appearance choices and semantic accents, and `settings.css` owns the settings dialog. Reuse semantic variables rather than adding hardcoded light-only colors. Keep explicit light/dark tokens synchronized with the automatic theme.
 
 Core geometry tokens:
 
-| Token | Value | Use |
-| --- | --- | --- |
-| `--radius-shell` | 24px | Sidebar and large shell geometry |
-| `--radius-dialog` | 22px | Dialogs |
-| `--radius-panel` | 18px | Composer, note cards, larger grouped controls |
-| `--radius-control` | 12px | Buttons, fields, navigation rows |
-| `--radius-icon` | 10px | Compact icon controls |
-| `--radius-small` | 8px | Menus and small inner controls |
+| Token              | Value | Use                                           |
+| ------------------ | ----- | --------------------------------------------- |
+| `--radius-shell`   | 24px  | Sidebar and large shell geometry              |
+| `--radius-dialog`  | 22px  | Dialogs                                       |
+| `--radius-panel`   | 18px  | Composer, note cards, larger grouped controls |
+| `--radius-control` | 12px  | Buttons, fields, navigation rows              |
+| `--radius-icon`    | 10px  | Compact icon controls                         |
+| `--radius-small`   | 8px   | Menus and small inner controls                |
 
 Do not default everything to maximum rounding. The radius should communicate hierarchy: shell, panel, control, then small control.
 
@@ -54,7 +54,7 @@ Dark theme anchors:
 - Main text: `#e8f1fb`; body text: `#bac9d9`.
 - Sidebar: translucent `#121e2c`; editor: `#132131`.
 
-Theme follows `prefers-color-scheme`; there is currently no manual switch. Any new UI must work in both modes in the same change. Use tokens for backgrounds, text, borders, glass, code, Markdown, status, scrims, scrollbars, and shadows. Do not solve dark mode with a broad inversion filter.
+Theme follows `prefers-color-scheme` by default; account settings can explicitly select light or dark. Five semantic action accents are available: Fresh blue, green, violet, rose, and orange. The notebook artwork keeps its blue identity. Account preferences apply before first paint and update immediately, reverting on failed saves. Any new UI must work in both modes in the same change. Use tokens for backgrounds, text, borders, glass, code, Markdown, status, scrims, scrollbars, and shadows. Do not solve dark mode with a broad inversion filter.
 
 Secondary colors are semantic, not decorative: green for success, coral/red for danger, yellow for favorites, and varied note/tag colors for identity. Avoid making large areas a single blue monochrome field.
 
@@ -63,14 +63,14 @@ Secondary colors are semantic, not decorative: green for success, coral/red for 
 - Interface stack: `Avenir Next`, Avenir, `Segoe UI`, sans-serif.
 - Editor and code stack: `SFMono-Regular`, Consolas, monospace.
 - Keep interface headings compact. The notebook does not use hero-scale type.
-- The notebook page heading is 26px (22px on phones), its notes section heading is 16px, note titles are 15px, body Markdown is 14px with 1.72 line height, and note dates are 11px.
+- The notebook page heading is 24px (22px on phones), its notes section heading is 16px, note titles are 15px, body Markdown is 14px with 1.72 line height, and note dates are 11px. Sidebar navigation is 13px with 16px icons and 34px desktop rows; coarse-pointer controls retain 44px targets.
 - Editable text fields use at least 16px on phones to avoid automatic focus zoom. Secondary text must remain readable; light-theme muted and faint tokens are `#5d6e82` and `#687b8e`.
 - Font weight creates hierarchy; letter spacing remains zero.
 - Long names and titles must truncate or wrap intentionally without widening their containers.
 
 ## Layout
 
-Desktop uses a 288px shell column and a flexible workspace. The sidebar is inset by 12px, fills the viewport height minus its margins, and is one rounded shell. Workspace content is capped at 1440px.
+Desktop uses a 244px shell column and a flexible workspace. The sidebar is inset by 10px, fills the viewport height minus its margins, and uses a 20px corner radius with a quiet border and reduced shadow. Workspace content is capped at 1440px with 24px desktop gutters. The brand, primary navigation, contextual lists, and account entry form distinct levels; contextual lists remain independently scrollable.
 
 An unframed notebook heading and New note action precede the composer. The composer is the first work surface, followed by a compact notes header and a responsive grid. Note cards use a minimum target width of 360px. The saved notebook virtualizes measured rows while preserving this geometry and single-column mobile layout; the small landing demo uses a regular grid. Keep focused controls, active media, and open item interactions mounted when they leave the viewport. Avoid wrapping major page sections in extra cards.
 
@@ -107,6 +107,8 @@ Responsive rules:
 - Empty states explain the current context (new notebook, favorites, tag, or search) and offer a useful next action. Loading and request errors must never appear as a misleading empty notebook.
 - Note titles are keyboard-accessible edit buttons. Titles wrap within their cards while favorite and menu actions retain their width.
 - Toasts report short success or failure outcomes; do not use them for permanent instructions.
+- The whole account row is a settings button. Keep Passkeys, backups, appearance/language, profile controls, and sign-out inside the settings dialog. Its desktop navigation becomes a horizontally scrollable section rail on phones; forms retain 16px mobile fields. Use one dialog focus scope with nested destructive/discard confirmations inside it.
+- All interface text and accessible action names use the four-language catalog. Labels may grow in Korean or Japanese; avoid fixed text widths and use intentional wrapping. User-authored names and note text keep their original language.
 
 ## Liquid Glass
 
@@ -120,13 +122,15 @@ Liquid Glass is an accent for depth and state, not the background of every compo
 
 The recipe combines a translucent semantic fill, one bright border, an inset top highlight, a subtle lower lowlight, blur, saturation, and a soft shadow. Preserve readable foreground contrast. Do not stack multiple glass panels on top of each other.
 
+The shared `liquid-glass-surface` treatment follows the lens principles from [Aave's “Building Glass for the Web”](https://aave.com/design/building-glass-for-the-web): live background pixels remain visible through the surface, while a directional specular highlight, bright rim, and restrained chromatic edge communicate depth. Keep distortion and color fringe subtle and local to compact controls; do not apply noisy SVG turbulence to individual icons. This CSS treatment is progressive enhancement over a solid semantic fill, so it stays usable in browsers without backdrop filtering.
+
 Any glass component must have a solid fallback under `prefers-reduced-transparency: reduce`. High-contrast mode must remove decorative blur and use a visible border.
 
 ## Brand and assets
 
 Use the exported bitmap assets in `public/`. The mark is a plump blue soft-cover journal with a clean blank cover, ivory paper edges, a cream ribbon bookmark, and a short sky-blue pencil. Its rounded proportions and matte clay texture provide the cute character. Keep the cover free of facial features and decorative writing lines. It was generated with `openai/gpt-image-2.5-flare` through the user-requested Replicate CLI. The 1024px regular master is `fresh-icon.png`, the navigation mark is `favicon-256x256.png`, and the PWA set includes regular and maskable variants up to 512px. Regular exports have rounded transparent corners; maskable exports retain an opaque icy-blue background and wider safe padding. Preserve the recognizable bound spine, paper edges, writing cue, tactile material, and existing blue palette. The mark must communicate note-taking at small sizes. The prompt and export recipe are recorded in the dated review.
 
-The mark must have separation from its background. The established treatment is a padded frame with a semantic blue surface, highlight, inner border, outer ring, and tinted shadow. Dark mode adjusts image saturation, brightness, and contrast. Do not place the raw mark directly on a same-value background.
+The mark must have separation from its background. The established treatment is the bare rounded mark with a single soft Fresh-blue glow behind it (`--logo-glow`), without stacked borders or rings. Dark mode adjusts image saturation, brightness, and contrast. Do not place the raw mark directly on a same-value background without its glow.
 
 Use `Fresh` in visible product copy. Do not use `freshWrite` or `FreshWrite`. Preserve sufficient whitespace around the mark and keep it a first-level signal on login, desktop navigation, and mobile navigation.
 
@@ -157,6 +161,7 @@ Kanban is a dense work surface within `/app`, not a separate marketing-style pag
 - Card menus expose left/right movement only when a neighboring column exists. Disabled movement remains visible so the menu layout does not jump.
 - Desktop and mobile may scroll columns horizontally. Do not shrink cards until their controls or text overlap.
 - Drag and drop is an enhancement; edit-dialog column selection and menu movement remain non-pointer alternatives.
+- Add card expands to one card-like textarea directly in the column, followed by compact Add card and Cancel controls. Do not surround the field with another decorative panel. Empty columns collapse their spare drop area while composing. Enter submits, Shift+Enter inserts a newline, IME confirmation does not submit, and Escape restores focus to the trigger. Whitespace-only titles are disabled; pending writes lock the draft, and failures retain it with an inline retryable error.
 
 ## Motion
 

@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
   import { onDestroy } from 'svelte';
   import { AlertTriangle } from '@lucide/svelte';
   import { modalFocus } from '$lib/modal-focus';
@@ -7,7 +11,7 @@
   let settle: ((confirmed: boolean) => void) | undefined;
   const id = $props.id();
 
-  export function ask(title: string, description: string, action = 'Delete'): Promise<boolean> {
+  export function ask(title: string, description: string, action = t('Delete')): Promise<boolean> {
     if (request) return Promise.resolve(false);
     request = { title, description, action };
     return new Promise((resolve) => {
@@ -26,7 +30,7 @@
 
 {#if request}
   <div class="dialog-layer confirmation-layer" role="presentation">
-    <button class="dialog-scrim" aria-label="Cancel" onclick={() => close()}></button>
+    <button class="dialog-scrim" aria-label={t('Cancel')} onclick={() => close()}></button>
     <div
       class="dialog confirmation-dialog"
       role="alertdialog"
@@ -41,7 +45,7 @@
         <p id={`${id}-description`}>{request.description}</p>
       </div>
       <div class="confirmation-actions">
-        <button class="secondary-button" data-dialog-initial-focus onclick={() => close()}>Cancel</button>
+        <button class="secondary-button" data-dialog-initial-focus onclick={() => close()}>{t('Cancel')}</button>
         <button class="danger-button" onclick={() => close(true)}>{request.action}</button>
       </div>
     </div>

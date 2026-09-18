@@ -1,6 +1,6 @@
 # Product Status
 
-Snapshot date: 2026-09-17. Package version: `0.2.0`. License: Apache-2.0.
+Snapshot date: 2026-09-18. Package version: `0.2.0`. License: Apache-2.0.
 
 This is a status snapshot, not a roadmap promise. Update it when capabilities or maturity materially change.
 
@@ -14,7 +14,9 @@ The repository is prepared for open source: it has an Apache-2.0 license, public
 
 | Area | Status | Current behavior |
 | --- | --- | --- |
-| Public landing page | Implemented | Cute paper-and-clay notebook desk at `/`, with authenticated-aware entry actions and a local interactive demo built from the production note composer, card, and Markdown renderer |
+| Public landing page | Implemented | Guests see the notebook desk and local editor demo; signed-in visits to `/` redirect directly to `/app` on the server |
+| Account settings | Implemented | Clickable account row opens profile, language/appearance, Passkeys, and backups; nicknames and private uploaded avatars persist on the account |
+| Interface languages | Implemented | Simplified Chinese, English, Korean, and Japanese; browser negotiation by default, account selection with SSR and refresh persistence |
 | GitHub authentication | Implemented | Better Auth social sign-in, session cookies, login redirects, sign-out, unconfigured state |
 | Passkey authentication | Implemented | Better Auth WebAuthn sign-in plus session-bound registration, listing, and deletion |
 | Notes | Implemented | Create, edit, delete, favorite, copy Markdown, color accent, timestamps, responsive card grid, overflow and right-click actions |
@@ -27,14 +29,14 @@ The repository is prepared for open source: it has an Apache-2.0 license, public
 | Pagination | Implemented | Automatic infinite loading with a manual Load more fallback; measured virtual rows and bounded body cache; 30-note default page, maximum 100 per request |
 | Editor | Implemented | Formatting toolbar, Write/Preview modes with error recovery, auto-growing textarea, keyboard save, in-memory draft retention across workspace switches, and unsaved-change confirmation |
 | Attachments | Implemented | Multiple pending files, 95 MiB limit, R2 storage, ownership checks, consistent open/download/delete menus |
-| Kanban | Implemented | Owned boards, default and custom columns, editable cards, drag/drop and menu movement, responsive horizontal workspace |
+| Kanban | Implemented | Owned boards, localized starter columns, editable cards, drag/drop and menu movement; compact inline card creation with keyboard/IME support, pending locks, and retained error drafts |
 | Context menus | Implemented | Shared viewport-aware menus for notes, attachments, tags, boards, columns, and cards with keyboard navigation |
 | Media previews | Implemented | Images, audio, video, expandable PDFs, styled document/archive/other rows |
 | Media seeking | Implemented | Authenticated `HEAD` and single byte-range responses from R2 |
 | Encrypted backup export | Implemented | Browser-side ZIP plus AES-256-GCM `.freshup` download |
 | Encrypted backup import | Implemented | Password decryption, manifest validation, staged attachment uploads, and atomic idempotent finalization; Merge is the default, Replace requires acknowledgement, and unsaved editor drafts block restore |
-| Responsive UI | Implemented | Desktop shell, off-canvas mobile sidebar, sticky mobile header, one-column mobile notes |
-| Light and dark themes | Implemented | Automatic OS preference with semantic tokens across application and rendered Markdown |
+| Responsive UI | Implemented | Compact 244px desktop shell with 13px navigation; off-canvas mobile sidebar, responsive settings dialog, sticky mobile header, one-column mobile notes |
+| Light and dark themes | Implemented | System, light, and dark settings plus five action accents, saved to the account and applied on first render |
 | Liquid Glass | Implemented selectively | Active sidebar states, login, attachment control, and backup file picker |
 | Login motion | Implemented | Three distinct sine layers with different paths, phases, amplitudes, directions, and speeds |
 | Brand assets | Implemented | Clean blue clay journal with a pencil and ribbon bookmark, generated with GPT Image 2.5 Flare through Replicate CLI; 1024px master, favicon sizes, PWA icons, maskable icons, web manifest |
@@ -47,7 +49,7 @@ The repository is prepared for open source: it has an Apache-2.0 license, public
 - R2 binding is `ATTACHMENTS`, bucket name is `fresh-attachments`.
 - Static assets use the `ASSETS` binding.
 - Smart placement, Worker logs, and sampled traces are enabled in configuration.
-- The current schema includes Better Auth and Passkey tables plus notes, tags, note/tag relations, attachments, backup import receipts, Kanban boards, columns, and cards across six migrations.
+- The current schema includes Better Auth and Passkey tables plus notes, tags, note/tag relations, attachments, backup import receipts, Kanban boards, columns, cards, and account preferences across seven migrations. The September 18 settings migration has been applied locally; this change has not deployed it to production.
 - Backup exports use schema version 2 and include Kanban data. Version 1 imports remain supported, and the compatibility header remains `FRESHUP1`.
 
 The first production release is live at `https://fresh.pwp.workers.dev`, running application commit `3ff60d8` as Worker version `5f57214e-4929-45fd-888d-3ebc7cd8db67` at 100% traffic. The initial release verified that D1 had no business tables, applied all six committed migrations, created the private `fresh-attachments` R2 bucket, and uploaded the four authentication settings as secrets with a newly generated production signing secret. The temporary secrets file was removed after deployment.
@@ -93,7 +95,7 @@ The September 17 long-list pass loads 3,000 real local D1 notes through the fina
 
 ## Known scope and limitations
 
-- Theme follows the operating system. There is no in-app theme selector.
+- Interface preferences and profile avatars are separate from the notebook backup format. Backups continue to contain notes, boards, and their attachments only.
 - GitHub remains the account-bootstrap provider. Email/password and other OAuth providers are disabled or not configured.
 - Search uses SQLite substring matching, with ASCII case folding and literal non-ASCII matching. It is not an indexed full-text search; very large libraries may need a dedicated index.
 - The virtual notebook mounts nearby rows and active interactions. Browser Find only sees mounted content; use notebook search for the full library. Cache limits are soft for visible/edited/playing records, and lightweight IDs/geometry still grow with the visited feed. Server pagination remains offset-based and is not a snapshot across concurrent writes.

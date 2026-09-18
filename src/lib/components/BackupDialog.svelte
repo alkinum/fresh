@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
   import { ArchiveRestore, Download, LoaderCircle, Upload, X } from '@lucide/svelte';
   import { decryptBackup, encryptBackup } from '$lib/backup';
   import { modalFocus } from '$lib/modal-focus';
@@ -6,12 +10,16 @@
 
   let {
     open,
+    embedded = false,
+    onBusyChange,
     hasUnsavedChanges = false,
     onClose,
     onComplete,
-    onError
+    onError,
   }: {
     open: boolean;
+    embedded?: boolean;
+    onBusyChange?: (busy: boolean) => void;
     hasUnsavedChanges?: boolean;
     onClose: () => void;
     onComplete: () => Promise<void> | void;
@@ -27,6 +35,9 @@
   let busy = $state(false);
   let progress = $state('');
   let pendingFinalizeUrl = $state<string | null>(null);
+  $effect(() => {
+    onBusyChange?.(busy);
+  });
 
   function dismiss(): void {
     if (busy) return;
@@ -41,31 +52,34 @@
 
   async function responseError(response: Response): Promise<string> {
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    return body?.error ?? `Request failed (${response.status})`;
+    return body?.error ?? t('Request failed ({status})', { status: response.status });
   }
 
   async function exportBackup(): Promise<void> {
     if (busy) return;
-    if (password.length < 8) return onError('Use a password with at least 8 characters');
-    if (password !== confirmation) return onError('Passwords do not match');
+    if (password.length < 8) return onError(t('Use a password with at least 8 characters'));
+    if (password !== confirmation) return onError(t('Passwords do not match'));
     busy = true;
 
     try {
-      progress = 'Preparing data';
+      progress = t('Preparing data');
       const response = await fetch('/api/backup');
       if (!response.ok) throw new Error(await responseError(response));
       const manifest = (await response.json()) as BackupManifest;
       let completed = 0;
       const blob = await encryptBackup(manifest, password, async (attachment) => {
-        progress = `Downloading attachments ${completed + 1}/${manifest.attachments.length}`;
+        progress = t('Downloading attachments {current}/{total}', {
+          current: completed + 1,
+          total: manifest.attachments.length,
+        });
         const fileResponse = await fetch(attachment.url);
-        if (!fileResponse.ok) throw new Error(`Could not export ${attachment.fileName}`);
+        if (!fileResponse.ok) throw new Error(t('Could not export {name}', { name: attachment.fileName }));
         const data = new Uint8Array(await fileResponse.arrayBuffer());
         completed += 1;
         return data;
       });
 
-      progress = 'Encrypting backup';
+      progress = t('Encrypting backup');
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
@@ -74,9 +88,9 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       password = '';
       confirmation = '';
-      progress = 'Backup exported';
+      progress = t('Backup exported');
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Backup export failed');
+      onError(error instanceof Error ? error.message : t('Backup export failed'));
       progress = '';
     } finally {
       busy = false;
@@ -95,35 +109,35 @@
 
   async function importBackup(): Promise<void> {
     if (busy) return;
-    if (hasUnsavedChanges) return onError('Save your draft before restoring a backup.');
+    if (hasUnsavedChanges) return onError(t('Save your draft before restoring a backup.'));
     busy = true;
     let preparedImport: { finalizeUrl: string } | null = null;
 
     try {
       if (pendingFinalizeUrl) {
-        progress = 'Confirming previous restore';
+        progress = t('Confirming previous restore');
         const retry = await fetch(pendingFinalizeUrl, { method: 'POST' });
         if (!retry.ok) {
           if (retry.status < 500) pendingFinalizeUrl = null;
           throw new Error(await responseError(retry));
         }
         pendingFinalizeUrl = null;
-        progress = 'Backup restored';
+        progress = t('Backup restored');
         await onComplete();
         return;
       }
 
-      if (!backupFile) throw new Error('Choose a Fresh backup');
-      if (!password) throw new Error('Enter the backup password');
+      if (!backupFile) throw new Error(t('Choose a Fresh backup'));
+      if (!password) throw new Error(t('Enter the backup password'));
       if (importMode === 'replace' && !replaceConfirmed)
-        throw new Error('Confirm that this restore will replace your current notebook.');
-      progress = 'Decrypting backup';
+        throw new Error(t('Confirm that this restore will replace your current notebook.'));
+      progress = t('Decrypting backup');
       const decrypted = await decryptBackup(backupFile, password);
-      progress = 'Restoring notes';
+      progress = t('Restoring notes');
       const response = await fetch('/api/backup', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ mode: importMode, manifest: decrypted.manifest })
+        body: JSON.stringify({ mode: importMode, manifest: decrypted.manifest }),
       });
       if (!response.ok) throw new Error(await responseError(response));
       const result = (await response.json()) as {
@@ -136,19 +150,22 @@
       for (let index = 0; index < result.attachments.length; index += 1) {
         const attachment = result.attachments[index];
         const bytes = decrypted.attachmentFiles.get(attachment.sourceId);
-        if (!bytes) throw new Error('Backup attachment is missing');
-        progress = `Restoring attachments ${index + 1}/${result.attachments.length}`;
+        if (!bytes) throw new Error(t('Backup attachment is missing'));
+        progress = t('Restoring attachments {current}/{total}', {
+          current: index + 1,
+          total: result.attachments.length,
+        });
         const body = new Uint8Array(bytes.byteLength);
         body.set(bytes);
         const upload = await fetch(attachment.uploadUrl, {
           method: 'PUT',
           headers: { 'content-type': 'application/octet-stream', 'x-file-size': String(body.byteLength) },
-          body: new Blob([body.buffer])
+          body: new Blob([body.buffer]),
         });
         if (!upload.ok) throw new Error(await responseError(upload));
       }
 
-      progress = 'Finalizing restore';
+      progress = t('Finalizing restore');
       pendingFinalizeUrl = result.finalizeUrl;
       const finalize = await fetch(result.finalizeUrl, { method: 'POST' });
       if (!finalize.ok) {
@@ -159,14 +176,18 @@
 
       password = '';
       backupFile = null;
-      progress = 'Backup restored';
+      progress = t('Backup restored');
       await onComplete();
     } catch (error) {
       if (preparedImport && !pendingFinalizeUrl) {
         await fetch(preparedImport.finalizeUrl, { method: 'DELETE' }).catch(() => undefined);
       }
-      const message = error instanceof Error ? error.message : 'Backup import failed';
-      onError(pendingFinalizeUrl ? `${message}. Use Import backup again to confirm the existing restore.` : message);
+      const message = error instanceof Error ? error.message : t('Backup import failed');
+      onError(
+        pendingFinalizeUrl
+          ? t('{message}. Use Import backup again to confirm the existing restore.', { message: t(message) })
+          : message,
+      );
       progress = '';
     } finally {
       busy = false;
@@ -175,70 +196,48 @@
 </script>
 
 {#if open}
-  <svg class="liquid-glass-defs" aria-hidden="true" focusable="false">
-    <defs>
-      <filter
-        id="fresh-backup-file-lens"
-        x="-20%"
-        y="-20%"
-        width="140%"
-        height="140%"
-        color-interpolation-filters="sRGB"
-      >
-        <feTurbulence type="fractalNoise" baseFrequency="0.08 0.12" numOctaves="1" seed="23" result="lensMap" />
-        <feDisplacementMap
-          in="SourceGraphic"
-          in2="lensMap"
-          scale="1.8"
-          xChannelSelector="R"
-          yChannelSelector="G"
-          result="refracted"
-        />
-        <feMerge>
-          <feMergeNode in="SourceGraphic" />
-          <feMergeNode in="refracted" />
-        </feMerge>
-      </filter>
-    </defs>
-  </svg>
-  <div class="dialog-layer" role="presentation">
-    <button class="dialog-scrim" aria-label="Close backups" onclick={dismiss}></button>
+  <div class={embedded ? 'settings-embedded' : 'dialog-layer'} role="presentation">
+    {#if !embedded}<button class="dialog-scrim" aria-label={t('Close backups')} onclick={dismiss}></button>{/if}
     <div
-      use:modalFocus={{ onDismiss: dismiss }}
+      use:modalFocus={{ active: !embedded, onDismiss: dismiss }}
       class="dialog backup-dialog"
-      role="dialog"
-      aria-modal="true"
+      role={embedded ? 'region' : 'dialog'}
+      aria-modal={embedded ? undefined : true}
       aria-labelledby="backup-title"
       aria-busy={busy}
     >
       <header>
         <div class="dialog-title">
           <ArchiveRestore size={19} />
-          <h2 id="backup-title">Encrypted backup</h2>
+          <h2 id="backup-title">{t('Encrypted backup')}</h2>
         </div>
-        <button class="icon-button" aria-label="Close" title="Close" onclick={dismiss}><X size={18} /></button>
+        {#if !embedded}<button class="icon-button" aria-label={t('Close')} title={t('Close')} onclick={dismiss}
+            ><X size={18} /></button
+          >{/if}
       </header>
 
-      <div class="segmented-control backup-tabs" aria-label="Backup action">
+      <div class="segmented-control backup-tabs" aria-label={t('Backup action')}>
         <button
           type="button"
           class:active={tab === 'export'}
+          class:liquid-glass-surface={tab === 'export'}
           aria-pressed={tab === 'export'}
           disabled={busy}
           onclick={() => {
             tab = 'export';
             progress = '';
-          }}><Download size={15} aria-hidden="true" /> Export</button
+          }}><Download size={15} aria-hidden="true" /> {t('Export')}</button
         >
         <button
           type="button"
           class:active={tab === 'import'}
+          class:liquid-glass-surface={tab === 'import'}
           aria-pressed={tab === 'import'}
           disabled={busy}
           onclick={() => {
             tab = 'import';
             progress = '';
-          }}><Upload size={15} aria-hidden="true" /> Import</button
+          }}><Upload size={15} aria-hidden="true" /> {t('Import')}</button
         >
       </div>
 
@@ -251,11 +250,12 @@
           }}
         >
           <p class="dialog-help">
-            Save your notes, boards, and files in one encrypted backup. Keep the password somewhere safe; it cannot be
-            recovered.
+            {t(
+              'Save your notes, boards, and files in one encrypted backup. Keep the password somewhere safe; it cannot be recovered.',
+            )}
           </p>
           <label>
-            <span>Password</span>
+            <span>{t('Password')}</span>
             <input
               data-dialog-initial-focus
               type="password"
@@ -267,7 +267,7 @@
             />
           </label>
           <label>
-            <span>Confirm password</span>
+            <span>{t('Confirm password')}</span>
             <input
               type="password"
               bind:value={confirmation}
@@ -282,7 +282,7 @@
                 size={16}
                 aria-hidden="true"
               />{/if}
-            Export backup
+            {t('Export backup')}
           </button>
         </form>
       {:else}
@@ -295,10 +295,10 @@
         >
           {#if hasUnsavedChanges}
             <p class="dialog-help" role="status">
-              Save your draft before restoring a backup so your latest edits stay safe.
+              {t('Save your draft before restoring a backup so your latest edits stay safe.')}
             </p>
           {/if}
-          <label class:selected={Boolean(backupFile)} class="file-picker" for="backup-file-input">
+          <label class:selected={Boolean(backupFile)} class="file-picker liquid-glass-surface" for="backup-file-input">
             <input
               id="backup-file-input"
               type="file"
@@ -308,13 +308,13 @@
             />
             <span class="file-picker-icon" aria-hidden="true"><Upload size={19} /></span>
             <span class="file-picker-copy">
-              <strong>{backupFile?.name ?? 'Choose a backup file'}</strong>
-              <span>{backupFile ? fileSizeLabel(backupFile.size) : 'Fresh encrypted backup (.freshup)'}</span>
+              <strong>{backupFile?.name ?? t('Choose a backup file')}</strong>
+              <span>{backupFile ? fileSizeLabel(backupFile.size) : t('Fresh encrypted backup (.freshup)')}</span>
             </span>
-            <span class="file-picker-action">{backupFile ? 'Change file' : 'Browse files'}</span>
+            <span class="file-picker-action">{backupFile ? t('Change file') : t('Browse files')}</span>
           </label>
           <label>
-            <span>Password</span>
+            <span>{t('Password')}</span>
             <input
               data-dialog-initial-focus
               type="password"
@@ -323,33 +323,37 @@
               disabled={busy || Boolean(pendingFinalizeUrl)}
             />
           </label>
-          <div class="segmented-control import-mode" aria-label="Import mode">
+          <div class="segmented-control import-mode" aria-label={t('Import mode')}>
             <button
               type="button"
               class:active={importMode === 'merge'}
+              class:liquid-glass-surface={importMode === 'merge'}
               aria-pressed={importMode === 'merge'}
               disabled={busy || Boolean(pendingFinalizeUrl)}
               onclick={() => {
                 importMode = 'merge';
                 replaceConfirmed = false;
-              }}>Merge</button
+              }}>{t('Merge')}</button
             >
             <button
               type="button"
               class:active={importMode === 'replace'}
+              class:liquid-glass-surface={importMode === 'replace'}
               aria-pressed={importMode === 'replace'}
               disabled={busy || Boolean(pendingFinalizeUrl)}
-              onclick={() => (importMode = 'replace')}>Replace</button
+              onclick={() => (importMode = 'replace')}>{t('Replace')}</button
             >
           </div>
           {#if importMode === 'replace'}
             <label class="restore-warning">
               <input type="checkbox" bind:checked={replaceConfirmed} disabled={busy || Boolean(pendingFinalizeUrl)} />
-              <span>Replace all my current notes, boards, and files with this backup. This cannot be undone.</span>
+              <span
+                >{t('Replace all my current notes, boards, and files with this backup. This cannot be undone.')}</span
+              >
             </label>
           {:else}
             <p class="dialog-help">
-              Add the backup to your notebook. Your existing notes, boards, and files stay in place.
+              {t('Add the backup to your notebook. Your existing notes, boards, and files stay in place.')}
             </p>
           {/if}
           <button
@@ -364,7 +368,7 @@
                 size={16}
                 aria-hidden="true"
               />{/if}
-            {pendingFinalizeUrl ? 'Retry restore' : 'Import backup'}
+            {pendingFinalizeUrl ? t('Retry restore') : t('Import backup')}
           </button>
         </form>
       {/if}

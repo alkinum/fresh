@@ -1,16 +1,9 @@
 <script lang="ts">
-  import {
-    ArchiveRestore,
-    Copy as CopyIcon,
-    FileText,
-    Fingerprint,
-    LayoutDashboard,
-    LogOut,
-    Plus,
-    Star,
-    Tags,
-    X
-  } from '@lucide/svelte';
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
+  import { Settings2, Copy as CopyIcon, FileText, LayoutDashboard, Plus, Star, Tags, X } from '@lucide/svelte';
   import ContextMenu from '$lib/components/ContextMenu.svelte';
   import { contextMenuAtPointer, contextMenuReturnFocus, type ContextMenuPlacement } from '$lib/context-menu';
   import { modalFocus } from '$lib/modal-focus';
@@ -52,10 +45,8 @@
     onBoard,
     onCopyBoard,
     onCreateBoard,
-    onPasskeys,
-    onBackup,
-    onLogout,
-    onClose
+    onSettings,
+    onClose,
   }: {
     user: UserInfo;
     tags: TagDto[];
@@ -72,9 +63,7 @@
     onBoard: (id: string) => void;
     onCopyBoard: (board: KanbanBoardSummaryDto) => void;
     onCreateBoard: () => void;
-    onPasskeys: () => void;
-    onBackup: () => void;
-    onLogout: () => void;
+    onSettings: () => void;
     onClose: () => void;
   } = $props();
 
@@ -83,14 +72,14 @@
   function openNavigationContextMenu(
     event: MouseEvent,
     kind: NavigationMenuState['kind'],
-    item: TagDto | KanbanBoardSummaryDto
+    item: TagDto | KanbanBoardSummaryDto,
   ): void {
     const button = event.currentTarget;
     if (!(button instanceof HTMLElement)) return;
     event.preventDefault();
     const common = {
       placement: contextMenuAtPointer(event, button),
-      returnFocus: contextMenuReturnFocus(button)
+      returnFocus: contextMenuReturnFocus(button),
     };
     navigationMenu =
       kind === 'tag'
@@ -123,26 +112,27 @@
 </script>
 
 {#if open}
-  <button class="sidebar-scrim" aria-label="Close navigation" onclick={onClose}></button>
+  <button class="sidebar-scrim" aria-label={t('Close navigation')} onclick={onClose}></button>
 {/if}
 
 <aside
   use:modalFocus={{ active: open, onDismiss: onClose, initialFocus: '.brand-row .mobile-only' }}
   class:open
   class="sidebar"
-  aria-label="Notebook navigation"
+  aria-label={t('Notebook navigation')}
 >
   <div class="brand-row">
     <span class="brand-mark" aria-hidden="true"><img src="/favicon-256x256.png" alt="" /></span>
     <strong>Fresh</strong>
-    <button class="icon-button mobile-only" aria-label="Close navigation" title="Close" onclick={onClose}>
+    <button class="icon-button mobile-only" aria-label={t('Close navigation')} title={t('Close')} onclick={onClose}>
       <X size={18} />
     </button>
   </div>
 
-  <nav class="primary-nav" aria-label="Workspace">
+  <nav class="primary-nav" aria-label={t('Workspace')}>
     <button
       class:active={activeWorkspace === 'notes' && activeView === 'all' && activeTagId === null}
+      class:liquid-glass-surface={activeWorkspace === 'notes' && activeView === 'all' && activeTagId === null}
       aria-pressed={activeWorkspace === 'notes' && activeView === 'all' && activeTagId === null}
       onclick={() => {
         onWorkspace('notes');
@@ -151,11 +141,12 @@
         onClose();
       }}
     >
-      <FileText size={17} />
-      <span>All notes</span>
+      <FileText size={16} />
+      <span>{t('All notes')}</span>
     </button>
     <button
       class:active={activeWorkspace === 'notes' && activeView === 'favorites'}
+      class:liquid-glass-surface={activeWorkspace === 'notes' && activeView === 'favorites'}
       aria-pressed={activeWorkspace === 'notes' && activeView === 'favorites'}
       onclick={() => {
         onWorkspace('notes');
@@ -163,29 +154,31 @@
         onClose();
       }}
     >
-      <Star size={17} />
-      <span>Favorites</span>
+      <Star size={16} />
+      <span>{t('Favorites')}</span>
     </button>
     <button
       class:active={activeWorkspace === 'kanban'}
+      class:liquid-glass-surface={activeWorkspace === 'kanban'}
       aria-pressed={activeWorkspace === 'kanban'}
       onclick={() => {
         onWorkspace('kanban');
         onClose();
       }}
     >
-      <LayoutDashboard size={17} />
-      <span>Kanban</span>
+      <LayoutDashboard size={16} />
+      <span>{t('Kanban')}</span>
     </button>
   </nav>
 
   <div class="sidebar-section">
     {#if activeWorkspace === 'notes'}
-      <div class="section-label"><span>Tags</span><span>{tags.length}</span></div>
+      <div class="section-label"><span>{t('Tags')}</span><span>{tags.length}</span></div>
       <div class="tag-nav">
         {#each tags as tag (tag.id)}
           <button
             class:active={activeTagId === tag.id}
+            class:liquid-glass-surface={activeTagId === tag.id}
             aria-pressed={activeWorkspace === 'notes' && activeTagId === tag.id}
             onclick={() => {
               onView('all');
@@ -199,18 +192,21 @@
             <span class="tag-count">{tag.count}</span>
           </button>
         {:else}
-          <div class="empty-tags">Add #tags to a note to organize your thoughts here.</div>
+          <div class="empty-tags">{t('Add #tags to a note to organize your thoughts here.')}</div>
         {/each}
       </div>
     {:else}
       <div class="section-label sidebar-board-label">
-        <span>Boards</span>
-        <button aria-label="Create board" title="Create board" onclick={onCreateBoard}><Plus size={14} /></button>
+        <span>{t('Boards')}</span>
+        <button aria-label={t('Create board')} title={t('Create board')} onclick={onCreateBoard}
+          ><Plus size={14} /></button
+        >
       </div>
       <div class="board-nav">
         {#each boards as board (board.id)}
           <button
             class:active={activeBoardId === board.id}
+            class:liquid-glass-surface={activeBoardId === board.id}
             aria-pressed={activeWorkspace === 'kanban' && activeBoardId === board.id}
             onclick={() => {
               onBoard(board.id);
@@ -223,44 +219,40 @@
             <span class="tag-count">{board.cardCount}</span>
           </button>
         {:else}
-          <div class="empty-tags">No boards yet</div>
+          <div class="empty-tags">{t('No boards yet')}</div>
         {/each}
       </div>
     {/if}
   </div>
 
   <div class="sidebar-footer">
-    <div class="sidebar-account-tools">
-      <button onclick={onPasskeys}>
-        <Fingerprint size={16} />
-        <span>Passkeys</span>
-      </button>
-      <button onclick={onBackup}>
-        <ArchiveRestore size={16} />
-        <span>Backups</span>
-      </button>
-    </div>
-    <div class="user-row">
+    <button
+      class="user-row liquid-glass-surface"
+      aria-label={t('Account settings')}
+      title={t('Account settings')}
+      aria-haspopup="dialog"
+      onclick={onSettings}
+    >
       {#if user.image}
         <img src={user.image} alt="" />
       {:else}
-        <div class="user-avatar" aria-hidden="true">{user.name.slice(0, 1).toUpperCase()}</div>
+        <span class="user-avatar" aria-hidden="true">{user.name.slice(0, 1).toUpperCase()}</span>
       {/if}
-      <div class="user-copy">
+      <span class="user-copy">
         <strong>{user.name}</strong>
         <span>{user.email}</span>
-      </div>
-      <button class="icon-button" aria-label="Sign out" title="Sign out" onclick={onLogout}>
-        <LogOut size={17} />
-      </button>
-    </div>
+      </span>
+      <Settings2 size={16} aria-hidden="true" />
+    </button>
   </div>
 </aside>
 
 {#if navigationMenu}
   <ContextMenu
     id={`sidebar-${navigationMenu.kind}-menu-${navigationMenu.item.id}`}
-    label={`Actions for ${navigationMenu.kind === 'tag' ? `#${navigationMenu.item.name}` : navigationMenu.item.name}`}
+    label={t('Actions for {name}', {
+      name: navigationMenu.kind === 'tag' ? `#${navigationMenu.item.name}` : navigationMenu.item.name,
+    })}
     placement={navigationMenu.placement}
     returnFocus={navigationMenu.returnFocus}
     onClose={() => (navigationMenu = null)}
@@ -268,20 +260,20 @@
     {#if navigationMenu.kind === 'tag'}
       <button role="menuitem" tabindex="-1" onclick={showNavigationItem}>
         <Tags size={15} aria-hidden="true" />
-        <span>Show notes</span>
+        <span>{t('Show notes')}</span>
       </button>
       <button role="menuitem" tabindex="-1" onclick={copyNavigationItem}>
         <CopyIcon size={15} aria-hidden="true" />
-        <span>Copy tag</span>
+        <span>{t('Copy tag')}</span>
       </button>
     {:else}
       <button role="menuitem" tabindex="-1" onclick={showNavigationItem}>
         <LayoutDashboard size={15} aria-hidden="true" />
-        <span>Open board</span>
+        <span>{t('Open board')}</span>
       </button>
       <button role="menuitem" tabindex="-1" onclick={copyNavigationItem}>
         <CopyIcon size={15} aria-hidden="true" />
-        <span>Copy board name</span>
+        <span>{t('Copy board name')}</span>
       </button>
     {/if}
   </ContextMenu>

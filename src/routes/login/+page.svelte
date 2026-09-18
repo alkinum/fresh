@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
   import { resolve } from '$app/paths';
   import { AlertCircle, Fingerprint, LoaderCircle } from '@lucide/svelte';
   import { authClient } from '$lib/auth-client';
@@ -9,7 +13,7 @@
   let authenticating = $state<'github' | 'passkey' | null>(null);
   let errorMessage = $state('');
   let passkeySupported = $derived(
-    typeof window !== 'undefined' && window.isSecureContext && 'PublicKeyCredential' in window
+    typeof window !== 'undefined' && window.isSecureContext && 'PublicKeyCredential' in window,
   );
 
   async function signIn(): Promise<void> {
@@ -19,9 +23,9 @@
 
     try {
       const result = await authClient.signIn.social({ provider: 'github', callbackURL: '/app' });
-      if (result.error) throw new Error(result.error.message ?? 'GitHub sign-in failed');
+      if (result.error) throw new Error(result.error.message ?? t('GitHub sign-in failed'));
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'GitHub sign-in failed';
+      errorMessage = error instanceof Error ? error.message : t('GitHub sign-in failed');
       authenticating = null;
     }
   }
@@ -36,13 +40,13 @@
       if (result.error) {
         errorMessage =
           'code' in result.error && result.error.code === 'AUTH_CANCELLED'
-            ? 'Passkey sign-in was cancelled.'
-            : (result.error.message ?? 'Passkey sign-in failed');
+            ? t('Passkey sign-in was cancelled.')
+            : (result.error.message ?? t('Passkey sign-in failed'));
         return;
       }
       location.assign('/app');
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Passkey sign-in failed';
+      errorMessage = error instanceof Error ? error.message : t('Passkey sign-in failed');
     } finally {
       authenticating = null;
     }
@@ -50,7 +54,7 @@
 </script>
 
 <svelte:head>
-  <title>Sign in | Fresh</title>
+  <title>{t('Sign in')} | Fresh</title>
 </svelte:head>
 
 <div class="login-page">
@@ -72,15 +76,15 @@
   </div>
 
   <main class="login-stage">
-    <section class="login-panel" aria-labelledby="login-title">
-      <a class="login-brand" href={resolve('/')} aria-label="Fresh home">
+    <section class="login-panel liquid-glass-surface" aria-labelledby="login-title">
+      <a class="login-brand" href={resolve('/')} aria-label={t('Fresh home')}>
         <span class="brand-mark" aria-hidden="true"><img src="/favicon-256x256.png" alt="" /></span>
         <strong>Fresh</strong>
       </a>
 
       <div class="login-copy">
-        <h1 id="login-title">Welcome back</h1>
-        <p>Your notes, lists, and little plans are right here.</p>
+        <h1 id="login-title">{t('Welcome back')}</h1>
+        <p>{t('Your notes, lists, and little plans are right here.')}</p>
       </div>
 
       <div class="login-actions">
@@ -95,13 +99,13 @@
           {:else}
             <Fingerprint size={19} />
           {/if}
-          <span>{authenticating === 'passkey' ? 'Checking...' : 'Continue with a passkey'}</span>
+          <span>{authenticating === 'passkey' ? t('Checking...') : t('Continue with a passkey')}</span>
         </button>
 
-        <div class="login-divider"><span>or</span></div>
+        <div class="login-divider"><span>{t('or')}</span></div>
 
         <button
-          class="login-github-button"
+          class="login-github-button liquid-glass-surface"
           disabled={!data.githubAuthConfigured || Boolean(authenticating)}
           aria-busy={authenticating === 'github'}
           onclick={() => void signIn()}
@@ -111,20 +115,20 @@
           {:else}
             <GitHubIcon size={19} />
           {/if}
-          <span>{authenticating === 'github' ? 'Connecting...' : 'Continue with GitHub'}</span>
+          <span>{authenticating === 'github' ? t('Connecting...') : t('Continue with GitHub')}</span>
         </button>
       </div>
 
-      <p class="login-help">New to Fresh? Start with GitHub, then add a passkey from your notebook.</p>
+      <p class="login-help">{t('New to Fresh? Start with GitHub, then add a passkey from your notebook.')}</p>
 
       {#if !passkeySupported || !data.githubAuthConfigured || errorMessage}
         <div class="login-message" role={errorMessage ? 'alert' : 'status'}>
           <AlertCircle size={16} />
           <span
-            >{errorMessage ||
+            >{t(errorMessage) ||
               (!passkeySupported
-                ? 'Passkeys require a supported browser and a secure connection.'
-                : 'GitHub sign-in is not configured on this environment.')}</span
+                ? t('Passkeys require a supported browser and a secure connection.')
+                : t('GitHub sign-in is not configured on this environment.'))}</span
           >
         </div>
       {/if}

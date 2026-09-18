@@ -1,0 +1,310 @@
+.settings-dialog {
+  width: min(740px, 100%);
+}
+.settings-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  min-height: 440px;
+}
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 10px;
+  border-right: 1px solid var(--border-soft);
+  background: var(--surface-toolbar);
+}
+.settings-nav button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  font-size: 12px;
+  cursor: pointer;
+}
+.settings-nav button svg {
+  flex-shrink: 0;
+}
+.settings-nav button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.settings-nav button.active {
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+  font-weight: 650;
+}
+.settings-nav .settings-signout {
+  margin-top: auto;
+}
+.settings-content {
+  min-width: 0;
+  padding: 24px;
+}
+.settings-content h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+.settings-description {
+  margin: 0 0 24px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.settings-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 24px;
+}
+.settings-avatar {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+  overflow: hidden;
+  font-size: 25px;
+  font-weight: 650;
+}
+.settings-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.settings-text-button {
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.settings-text-button:hover:not(:disabled) {
+  color: var(--text);
+}
+.settings-field-hint {
+  margin: 8px 0 0;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.settings-form {
+  display: grid;
+  gap: 22px;
+}
+.settings-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-strong);
+  font-size: 12px;
+  font-weight: 600;
+}
+.settings-form input,
+.settings-form select {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  padding: 8px 11px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+}
+.settings-form > .primary-button {
+  justify-self: start;
+  min-width: 128px;
+}
+.settings-email {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.settings-email > span {
+  font-weight: 600;
+}
+.settings-email strong {
+  font-weight: 400;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.settings-email p {
+  margin: 0;
+  color: var(--faint);
+  font-size: 11px;
+}
+.settings-form fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.settings-form legend {
+  padding: 0;
+  margin-bottom: 10px;
+  color: var(--text-strong);
+  font-size: 12px;
+  font-weight: 600;
+}
+.settings-theme {
+  width: 100%;
+}
+.settings-theme button {
+  flex: 1;
+}
+.settings-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 3px;
+}
+.settings-colors button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--swatch);
+  color: white;
+  cursor: pointer;
+}
+.settings-colors button.active {
+  outline: 2px solid var(--swatch);
+  outline-offset: 1px;
+}
+.settings-feedback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--success-text);
+  overflow-wrap: anywhere;
+}
+.settings-feedback.error {
+  color: var(--danger-text);
+}
+.settings-embedded > .dialog {
+  position: static;
+  z-index: auto;
+  width: 100%;
+  max-height: none;
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.settings-embedded .dialog > header {
+  position: static;
+  min-height: auto;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.settings-embedded .dialog-title > svg {
+  display: none;
+}
+.settings-embedded .dialog-title h2 {
+  font-size: 17px;
+}
+.settings-embedded .dialog-form {
+  padding: 0;
+}
+.settings-embedded .backup-tabs {
+  margin: 0 0 18px;
+}
+.settings-embedded .passkey-intro {
+  margin: 0 0 20px;
+}
+.settings-embedded .passkey-add {
+  padding: 0;
+}
+.settings-embedded .passkey-list {
+  padding-inline: 0;
+}
+.settings-embedded .passkey-empty {
+  margin: 20px 0 0;
+}
+.settings-embedded .dialog-help {
+  font-size: 13px;
+  line-height: 1.65;
+}
+.settings-embedded .passkey-intro p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.settings-embedded .passkey-add > label,
+.settings-embedded .dialog-form label > span {
+  font-size: 12px;
+}
+.settings-embedded .passkey-row strong {
+  font-size: 13px;
+}
+.settings-embedded .passkey-row span {
+  font-size: 11px;
+}
+.settings-avatar-row > div:last-child {
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .settings-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-soft);
+    padding: 8px;
+  }
+  .settings-nav button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: 42px;
+  }
+  .settings-nav .settings-signout {
+    margin: 0;
+  }
+  .settings-content {
+    padding: 20px 16px;
+  }
+  .settings-avatar-row {
+    gap: 12px;
+  }
+  .settings-avatar {
+    width: 56px;
+    height: 56px;
+  }
+  .settings-form input,
+  .settings-form select {
+    font-size: 16px;
+    height: 44px;
+  }
+}
+@media (pointer: coarse) {
+  .settings-nav button,
+  .settings-text-button {
+    min-height: 44px;
+  }
+  .settings-colors button {
+    width: 44px;
+    height: 44px;
+  }
+}

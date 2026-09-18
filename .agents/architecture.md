@@ -42,16 +42,20 @@ Fresh owns:
 | `kanban_boards` | `id`, `userId`, name, color, position | Private board summaries ordered per user |
 | `kanban_columns` | `id`, `boardId`, `userId`, name, position | Ordered columns with cascade deletion from their board |
 | `kanban_cards` | `id`, `boardId`, `columnId`, `userId`, title, description, position | Ordered cards; server re-indexes source and target columns on moves |
+| `user_preferences` | `userId`, language, theme, accent | One preference record per account, cascading on user deletion |
 
-The schema is in `src/db/schema.ts`. Six migrations currently establish authentication, attachment storage, current Passkey metadata/index compatibility, Kanban storage, backup import receipts, and per-user tag uniqueness. Schema changes must be represented by new migrations.
+The schema is in `src/db/schema.ts`. Seven migrations currently establish authentication, attachment storage, current Passkey metadata/index compatibility, Kanban storage, backup import receipts, per-user tag uniqueness, and account preferences. Schema changes must be represented by new migrations.
 
 ## Pages and APIs
 
 | Route | Behavior |
 | --- | --- |
-| `/` | Public Fresh landing page with authenticated or sign-in call to action and a non-persistent interactive note demo |
+| `/` | Public Fresh landing page and non-persistent interactive note demo for guests; authenticated users receive a server-side 303 redirect to `/app` |
 | `/login` | Passkey and GitHub OAuth entry, disabled configuration states, animated Fresh brand scene |
 | `/app` | Authenticated notes and Kanban workspace; first page loads 30 notes, tag summaries, and board summaries |
+| `PATCH /api/account` | Validate and save the authenticated user's nickname and/or language, theme, and accent preferences |
+| `PUT/DELETE /api/account/avatar` | Upload or remove the authenticated user's profile image |
+| `GET /api/account/avatar/:id` | Privately serve an avatar from the authenticated user's R2 namespace |
 | `GET /api/notes` | Paginated notes filtered by favorite, tag, and an optional search string (up to 200 characters) |
 | `POST /api/notes` | Create a note from Markdown content |
 | `POST /api/notes/batch` | Rehydrate up to 100 owned note IDs in request order; unavailable IDs are omitted |
@@ -112,10 +116,20 @@ The task update compares its source content inside the atomic D1 batch. Concurre
 - The composer disables editing during save/upload and formatting during Preview. A failed preview replaces stale HTML with an inline retry state.
 - Kanban is a separate workspace view. The page loads board summaries, the active board is fetched on selection, and the tab rail and sidebar both switch boards without a full navigation.
 - New boards start with three columns. Cards can be dragged between columns; move actions in the card menu provide a non-drag path for keyboard and touch users.
-- Kanban boards are ordered by position and start with `To do`, `In progress`, and `Done` columns. Current limits are 30 boards per user, 12 columns per board, and 500 cards per board.
+- Kanban boards are ordered by position and start with three columns named in the account's current interface language (`To do`, `In progress`, and `Done` in English). Saved column names remain user content and do not change when the language changes. Current limits are 30 boards per user, 12 columns per board, and 500 cards per board.
 - Card titles allow 200 characters and descriptions allow 10,000. Shared API byte budgets account for Unicode and JSON escapes rather than assuming one byte per character.
 - Card moves are optimistic in the browser and are rolled back if the owned, same-board server update fails.
 - Notes, attachments, tags, boards, columns, and cards expose the same viewport-aware context-menu pattern. Native menus remain available for selected text, links, and embedded media.
+
+## Account settings and localization
+
+The entire sidebar account row opens one settings dialog with Profile, Appearance & language, Passkeys, and Backups sections. The existing Passkey and backup components render inside its focus scope. Busy uploads, saves, registration/deletion, and backup operations lock section switching and dismissal. Unsaved nickname edits require discard confirmation. Sign-out remains protected by the notebook draft guard.
+
+Nicknames are trimmed and limited to 80 characters. Avatar selection accepts PNG/JPEG/WebP up to 10 MiB in the browser, crops centrally to a 256px square, and re-encodes as WebP before upload. The server independently caps actual bytes at 2 MiB and validates the raster signature. It uploads to a unique user-owned R2 object, conditionally changes the profile image, and cleans up replaced or losing objects. DTOs contain authenticated application URLs; storage keys are never exposed. Removing an avatar restores the initial-letter fallback.
+
+Preferences support `auto`, `en`, `zh-CN`, `ko`, and `ja` for language; `auto`, `light`, and `dark` for appearance; and blue, green, violet, rose, and orange accents. A new account follows the browser language and OS appearance. `auto` language negotiates supported languages using weighted `Accept-Language` values, with English fallback. Preferences persist in D1 and successful preference writes also set an HttpOnly, same-origin preference cookie for public pages after sign-out. Authenticated pages use the account record as the authority. User content and notebook backups do not contain interface preferences or avatars.
+
+The hook sets validated language/theme/accent attributes in the initial HTML. Layout data initializes a separate reactive translation context for each render; client changes apply immediately and roll back if saving fails. The catalog covers navigation, editor controls, item commands, settings, public pages, and interpolated messages; dates follow the selected interface locale. Provider-specific errors and user-authored/sample Markdown can retain their original language.
 
 ## Attachment flow
 
@@ -164,6 +178,8 @@ The version 2 backup contract includes notes, tags, note relations, attachments,
 
 Production setup requires OAuth credentials, a Better Auth secret, the canonical production `BETTER_AUTH_URL`, the correct GitHub callback, migrated D1 schema, and the R2 bucket. Secrets are configured outside Git.
 
-The first production release is served at `https://fresh.pwp.workers.dev`. Its canonical `BETTER_AUTH_URL` uses that origin, and the GitHub OAuth application must register `https://fresh.pwp.workers.dev/api/auth/callback/github`. The production Worker has the four authentication settings stored as secrets, including a separately generated production signing secret. Do not replace that secret with the local development value on later deployments. All six migrations and the `fresh-attachments` bucket were provisioned during the first release; subsequent releases should inspect pending migrations and retain existing resources and secrets.
+Production is served at `https://fresh.pwp.sh` (a custom domain on the `fresh` Worker; `https://fresh.pwp.workers.dev` remains attached). Its canonical `BETTER_AUTH_URL` is `https://fresh.pwp.sh`, and the production GitHub OAuth application must register `https://fresh.pwp.sh/api/auth/callback/github`. Production and local development use separate GitHub OAuth applications because OAuth apps allow only one callback URL: the production app is client ID `Ov23li0nhmFnACr8ntJ3`, while the local `.env`/`.dev.vars` app keeps the `http://localhost:5173` callback. The production Worker has the four authentication settings stored as secrets, including a separately generated production signing secret. Do not replace that secret with the local development value on later deployments. All six migrations and the `fresh-attachments` bucket were provisioned during the first release; subsequent releases should inspect pending migrations and retain existing resources and secrets.
+
+Passkeys are bound to the WebAuthn relying-party host derived from `BETTER_AUTH_URL`. Passkeys registered while the canonical origin was `fresh.pwp.workers.dev` do not authenticate on `fresh.pwp.sh`; affected users must sign in with GitHub and register a new passkey.
 
 The Better Auth Passkey plugin derives its WebAuthn relying-party host from `BETTER_AUTH_URL`, uses `Fresh` as the relying-party name, and stores credential metadata in the existing `passkey` table. Registration requires an authenticated session. The app exposes registration, listing, and deletion from the sidebar Passkeys dialog; the login page uses discoverable passkey authentication.

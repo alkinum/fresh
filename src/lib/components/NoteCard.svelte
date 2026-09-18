@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
   import { onDestroy, tick } from 'svelte';
   import { Copy as CopyIcon, Edit3, MoreHorizontal, Star, Tags, Trash2 } from '@lucide/svelte';
   import AttachmentGallery from '$lib/components/AttachmentGallery.svelte';
@@ -63,7 +67,7 @@
   onDestroy(() => onRetain?.(false));
 
   function dateLabel(value: string): string {
-    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(
+    return new Intl.DateTimeFormat(i18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(
       new Date(value),
     );
   }
@@ -188,16 +192,18 @@
     <div class="note-heading">
       <span class="note-accent" aria-hidden="true"></span>
       <div>
-        <h2><button class="note-title-button" title="Edit note" onclick={() => onEdit(note)}>{note.title}</button></h2>
+        <h2>
+          <button class="note-title-button" title={t('Edit note')} onclick={() => onEdit(note)}>{note.title}</button>
+        </h2>
         <time datetime={note.updatedAt}>{dateLabel(note.updatedAt)}</time>
       </div>
     </div>
     <div class="note-actions">
       <button
         class:active={note.isFavorite}
-        aria-label={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        aria-label={note.isFavorite ? t('Remove from favorites') : t('Add to favorites')}
         aria-pressed={note.isFavorite}
-        title={note.isFavorite ? 'Remove favorite' : 'Favorite'}
+        title={note.isFavorite ? t('Remove favorite') : t('Favorite')}
         disabled={favoritePending || taskPending}
         aria-busy={favoritePending}
         onclick={() => void changeFavorite()}
@@ -205,11 +211,11 @@
         <Star size={16} fill={note.isFavorite ? 'currentColor' : 'none'} />
       </button>
       <button
-        aria-label="Note actions"
+        aria-label={t('Note actions')}
         aria-haspopup="menu"
         aria-expanded={menu?.kind === 'note'}
         aria-controls={menu?.kind === 'note' ? `note-menu-${note.id}` : undefined}
-        title="Actions"
+        title={t('Actions')}
         onclick={toggleNoteMenu}
         onkeydown={openNoteMenuFromKeyboard}
       >
@@ -253,7 +259,9 @@
 {#if menu}
   <ContextMenu
     id={menu.kind === 'note' ? `note-menu-${note.id}` : `note-tag-menu-${menu.tag.id}`}
-    label={menu.kind === 'note' ? `Actions for ${note.title}` : `Actions for #${menu.tag.name}`}
+    label={menu.kind === 'note'
+      ? t('Actions for {name}', { name: note.title })
+      : t('Actions for {name}', { name: `#${menu.tag.name}` })}
     placement={menu.placement}
     returnFocus={menu.returnFocus}
     initialFocus={menu.initialFocus}
@@ -262,7 +270,7 @@
     {#if menu.kind === 'note'}
       <button role="menuitem" tabindex="-1" onclick={() => runNoteAction(onEdit)}>
         <Edit3 size={15} aria-hidden="true" />
-        <span>Edit</span>
+        <span>{t('Edit')}</span>
       </button>
       <button
         role="menuitem"
@@ -274,25 +282,25 @@
         }}
       >
         <Star size={15} fill={note.isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
-        <span>{note.isFavorite ? 'Remove favorite' : 'Add to favorites'}</span>
+        <span>{note.isFavorite ? t('Remove favorite') : t('Add to favorites')}</span>
       </button>
       <button role="menuitem" tabindex="-1" onclick={() => runNoteAction(onCopy)}>
         <CopyIcon size={15} aria-hidden="true" />
-        <span>Copy Markdown</span>
+        <span>{t('Copy Markdown')}</span>
       </button>
       <div role="separator"></div>
       <button class="danger" role="menuitem" tabindex="-1" onclick={() => runNoteAction(onDelete)}>
         <Trash2 size={15} aria-hidden="true" />
-        <span>Delete</span>
+        <span>{t('Delete')}</span>
       </button>
     {:else}
       <button role="menuitem" tabindex="-1" onclick={filterMenuTag}>
         <Tags size={15} aria-hidden="true" />
-        <span>Show notes</span>
+        <span>{t('Show notes')}</span>
       </button>
       <button role="menuitem" tabindex="-1" onclick={copyMenuTag}>
         <CopyIcon size={15} aria-hidden="true" />
-        <span>Copy tag</span>
+        <span>{t('Copy tag')}</span>
       </button>
     {/if}
   </ContextMenu>

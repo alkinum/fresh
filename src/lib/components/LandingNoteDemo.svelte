@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
   import { onDestroy, tick, untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { FilePenLine } from '@lucide/svelte';
@@ -40,7 +44,7 @@ A quiet place for **clear thinking**.
     ['video/ogg', 'video'],
     ['video/quicktime', 'video'],
     ['video/webm', 'video'],
-    ['application/pdf', 'pdf']
+    ['application/pdf', 'pdf'],
   ]);
   const documentExtensions = new Set([
     'doc',
@@ -55,7 +59,7 @@ A quiet place for **clear thinking**.
     'xlsx',
     'ods',
     'numbers',
-    'rtf'
+    'rtf',
   ]);
   const archiveExtensions = new Set(['zip', '7z', 'rar', 'tar', 'gz', 'bz2', 'xz']);
 
@@ -108,7 +112,7 @@ A quiet place for **clear thinking**.
         size: file.size,
         createdAt,
         url,
-        downloadUrl: url
+        downloadUrl: url,
       };
     });
   }
@@ -153,7 +157,7 @@ A quiet place for **clear thinking**.
           color: tagColor(name),
           count: 1,
           createdAt: now,
-          updatedAt: now
+          updatedAt: now,
         }
       );
     });
@@ -169,28 +173,28 @@ A quiet place for **clear thinking**.
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
       tags,
-      attachments: [...makeAttachments(files, id, now), ...(existing?.attachments ?? [])]
+      attachments: [...makeAttachments(files, id, now), ...(existing?.attachments ?? [])],
     };
   }
 
   async function saveContent(content: string, files: File[], currentNote: NoteDto | null) {
     return {
       note: await buildNote(content, currentNote, files),
-      created: currentNote === null
+      created: currentNote === null,
     };
   }
 
   function savedNote(saved: NoteDto, created: boolean): void {
     replaceNote(saved);
     editing = null;
-    showStatus(created ? 'Note saved' : 'Note updated');
+    showStatus(created ? t('Note saved') : t('Note updated'));
   }
 
   function toggleFavorite(item: NoteDto): void {
     const updated = { ...item, isFavorite: !item.isFavorite };
     replaceNote(updated);
     if (editing?.id === item.id) editing = updated;
-    showStatus(updated.isFavorite ? 'Added to favorites' : 'Removed from favorites');
+    showStatus(updated.isFavorite ? t('Added to favorites') : t('Removed from favorites'));
   }
 
   async function editNote(item: NoteDto): Promise<void> {
@@ -207,40 +211,49 @@ A quiet place for **clear thinking**.
       await navigator.clipboard.writeText(value);
       showStatus(message);
     } catch {
-      showStatus('Could not copy');
+      showStatus(t('Could not copy'));
     }
   }
 
   async function deleteNote(item: NoteDto): Promise<void> {
-    if (!(await confirmation?.ask('Delete this demo note?', `“${item.title}” will be removed from the demo.`))) return;
+    if (
+      !(await confirmation?.ask(
+        t('Delete this demo note?'),
+        t('“{name}” will be removed from the demo.', { name: item.title }),
+      ))
+    )
+      return;
     replaceNote(null);
     if (editing?.id === item.id) editing = null;
-    showStatus('Note deleted');
+    showStatus(t('Note deleted'));
   }
 
   async function deleteAttachment(item: NoteDto, attachment: AttachmentDto): Promise<void> {
     if (
-      !(await confirmation?.ask('Delete this attachment?', `“${attachment.fileName}” will be removed from the demo.`))
+      !(await confirmation?.ask(
+        t('Delete this attachment?'),
+        t('“{name}” will be removed from the demo.', { name: attachment.fileName }),
+      ))
     )
       return;
     const updated = {
       ...item,
-      attachments: item.attachments.filter((current) => current.id !== attachment.id)
+      attachments: item.attachments.filter((current) => current.id !== attachment.id),
     };
     releaseAttachment(attachment);
     note = updated;
     if (editing?.id === item.id) editing = updated;
-    showStatus('Attachment deleted');
+    showStatus(t('Attachment deleted'));
   }
 
   async function toggleTask(item: NoteDto, taskIndex: number, checked: boolean): Promise<void> {
     const { toggleTaskItem } = await import('$lib/markdown');
     const content = toggleTaskItem(item.content, taskIndex, checked);
-    if (content === null) throw new Error('Task could not be updated');
+    if (content === null) throw new Error(t('Task could not be updated'));
     const updated = await buildNote(content, item, []);
     replaceNote(updated);
     if (editing?.id === item.id) editing = updated;
-    showStatus('Task updated');
+    showStatus(t('Task updated'));
   }
 
   onDestroy(() => {
@@ -250,7 +263,7 @@ A quiet place for **clear thinking**.
   });
 </script>
 
-<div class="landing-note-demo" bind:this={root} role="region" aria-label="Interactive note demo">
+<div class="landing-note-demo" bind:this={root} role="region" aria-label={t('Interactive note demo')}>
   <NoteComposer
     bind:this={composer}
     note={editing}
@@ -267,17 +280,18 @@ A quiet place for **clear thinking**.
       {note}
       onFavorite={toggleFavorite}
       onEdit={(item) => void editNote(item)}
-      onCopy={(item) => void copyText(item.content, 'Markdown copied')}
+      onCopy={(item) => void copyText(item.content, t('Markdown copied'))}
       onDelete={deleteNote}
       onDeleteAttachment={deleteAttachment}
-      onTag={(id) => showStatus(`Selected ${note?.tags.find((tag) => tag.id === id)?.name ?? 'tag'}`)}
-      onCopyTag={(tag) => void copyText(`#${tag.name}`, 'Tag copied')}
+      onTag={(id) =>
+        showStatus(t('Selected {name}', { name: note?.tags.find((tag) => tag.id === id)?.name ?? t('Tag') }))}
+      onCopyTag={(tag) => void copyText(`#${tag.name}`, t('Tag copied'))}
       onTaskToggle={toggleTask}
     />
   {:else}
     <div class="landing-demo-empty">
       <FilePenLine size={22} aria-hidden="true" />
-      <strong>Your next note starts here</strong>
+      <strong>{t('Your next note starts here')}</strong>
     </div>
   {/if}
 

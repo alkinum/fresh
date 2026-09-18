@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
   import { resolve } from '$app/paths';
   import {
     ArrowDown,
@@ -13,18 +17,18 @@
     Paperclip,
     PenLine,
     Sparkles,
-    Star
+    Star,
   } from '@lucide/svelte';
   import GitHubIcon from '$lib/components/GitHubIcon.svelte';
   import LandingNoteDemo from '$lib/components/LandingNoteDemo.svelte';
   import type { PageData } from './$types';
   let { data }: { data: PageData } = $props();
   let appHref = $derived(data.user ? resolve('/app') : resolve('/login'));
-  let appLabel = $derived(data.user ? 'Open your notebook' : 'Make yourself at home');
+  let appLabel = $derived(data.user ? t('Open your notebook') : t('Make yourself at home'));
 </script>
 
 <svelte:head>
-  <title>Fresh | Notes, lists &amp; little plans</title>
+  <title>Fresh | {t('Notes, lists & little plans')}</title>
   <meta
     name="description"
     content="A cheerful private notebook for Markdown notes, little plans, Kanban boards, and the files that belong with them. Try the editor right here."
@@ -32,106 +36,111 @@
 </svelte:head>
 
 <div class="landing-page">
-  <a class="skip-link" href="#landing-main">Skip to content</a>
+  <a class="skip-link" href="#landing-main">{t('Skip to content')}</a>
   <header class="site-header page-width">
-    <a class="wordmark" href={resolve('/')} aria-label="Fresh home"
+    <a class="wordmark" href={resolve('/')} aria-label={t('Fresh home')}
       ><span class="brand-mark" aria-hidden="true"><img src="/favicon-256x256.png" alt="" /></span><strong>Fresh</strong
       ></a
     >
-    <nav aria-label="Main navigation">
-      <a class="text-link" href="#inside">A look inside</a><a class="text-link" href="#playground">Try it out</a><a
-        class="header-action"
-        href={appHref}>{data.user ? 'Open app' : 'Sign in'}<ArrowRight size={16} /></a
-      >
+    <nav aria-label={t('Main navigation')}>
+      <a class="text-link" href="#inside">{t('A look inside')}</a><a class="text-link" href="#playground"
+        >{t('Try it out')}</a
+      ><a class="header-action" href={appHref}>{data.user ? t('Open app') : t('Sign in')}<ArrowRight size={16} /></a>
     </nav>
   </header>
   <main id="landing-main">
     <section class="hero page-width" aria-labelledby="landing-title">
       <div class="hero-copy">
-        <span class="little-label"><span class="status-dot"></span>Your own happy corner of the internet</span>
+        <span class="little-label"><span class="status-dot"></span>{t('Your own happy corner of the internet')}</span>
         <h1 id="landing-title">
           Fresh<span class="title-spark" aria-hidden="true"><Sparkles size={35} strokeWidth={1.6} /></span>
         </h1>
-        <h2>Notes, lists<br />&amp; little plans.</h2>
+        <h2>{t('Notes, lists')}<br />{t('& little plans.')}</h2>
         <p>
-          Catch a thought. Make a list. Keep a little something for later. A private notebook that makes the everyday
-          feel a bit more you.
+          {t(
+            'Catch a thought. Make a list. Keep a little something for later. A private notebook that makes the everyday feel a bit more you.',
+          )}
         </p>
         <div class="hero-actions">
           <a class="clay-button" href={appHref}>{appLabel}<ArrowRight size={17} /></a><a
             class="try-link"
-            href="#playground">Take it for a scribble <ArrowDown size={15} /></a
+            href="#playground">{t('Take it for a scribble')} <ArrowDown size={15} /></a
           >
         </div>
-        <span class="hero-footnote"><LockKeyhole size={13} /> Just for you. No public feed.</span>
+        <span class="hero-footnote"><LockKeyhole size={13} /> {t('Just for you. No public feed.')}</span>
       </div>
       <div class="desk-scene" aria-hidden="true">
         <div class="notebook-spine"></div>
-        <div class="desk-caption"><span></span> A little peek at your notebook</div>
+        <div class="desk-caption"><span></span> {t('A little peek at your notebook')}</div>
         <article class="paper-note">
           <div class="paper-top">
-            <span><FileText size={14} /> PERSONAL NOTE</span><Star size={17} fill="currentColor" />
+            <span><FileText size={14} /> {t('PERSONAL NOTE')}</span><Star size={17} fill="currentColor" />
           </div>
-          <h3>A nice little Saturday</h3>
-          <p>Less rushing.<br />More of the good stuff.</p>
+          <h3>{t('A nice little Saturday')}</h3>
+          <p>{t('Less rushing.')}<br />{t('More of the good stuff.')}</p>
           <div class="paper-rule"></div>
-          <div class="paper-task done"><span><Check size={12} /></span> Coffee, just the way I like it</div>
-          <div class="paper-task"><span></span> A walk with no particular plan</div>
-          <div class="paper-task"><span></span> Finally start that little project</div>
+          <div class="paper-task done"><span><Check size={12} /></span> {t('Coffee, just the way I like it')}</div>
+          <div class="paper-task"><span></span> {t('A walk with no particular plan')}</div>
+          <div class="paper-task"><span></span> {t('Finally start that little project')}</div>
           <div class="paper-tags"><span>#weekend</span><span>#small-joys</span></div>
         </article>
         <div class="mascot-sticker">
-          <img src="/icon-512x512.png" alt="" width="132" height="132" /><span>Hello, you!</span>
+          <img src="/icon-512x512.png" alt="" width="132" height="132" /><span>{t('Hello, you!')}</span>
         </div>
         <article class="file-note">
           <span class="file-picture"><Image size={27} strokeWidth={1.5} /></span>
-          <div><strong>A little inspiration</strong><span>keep-this-one.png</span></div>
+          <div><strong>{t('A little inspiration')}</strong><span>keep-this-one.png</span></div>
           <Paperclip size={16} />
         </article>
         <article class="board-note">
-          <header><LayoutDashboard size={15} /><strong>One thing at a time</strong><span>•••</span></header>
+          <header><LayoutDashboard size={15} /><strong>{t('One thing at a time')}</strong><span>•••</span></header>
           <div class="tiny-board">
-            <div><small><i></i> To do</small><span>A new idea</span><span>Make a start</span></div>
-            <div><small><i></i> Doing</small><span>Something good</span></div>
-            <div><small><i></i> Done</small><span><Check size={11} /> First step!</span></div>
+            <div><small><i></i> {t('To do')}</small><span>{t('A new idea')}</span><span>{t('Make a start')}</span></div>
+            <div><small><i></i> {t('Doing')}</small><span>{t('Something good')}</span></div>
+            <div><small><i></i> {t('Done')}</small><span><Check size={11} /> {t('First step!')}</span></div>
           </div>
         </article>
-        <div class="private-sticker"><Heart size={14} fill="currentColor" /> A space of your own</div>
+        <div class="private-sticker"><Heart size={14} fill="currentColor" /> {t('A space of your own')}</div>
       </div>
     </section>
 
     <section id="inside" class="inside-band" aria-labelledby="inside-title">
       <div class="page-width">
         <div class="section-intro">
-          <span class="little-label">Small details. Thoughtfully kept.</span>
-          <h2 id="inside-title">Everything you want to keep close.</h2>
+          <span class="little-label">{t('Small details. Thoughtfully kept.')}</span>
+          <h2 id="inside-title">{t('Everything you want to keep close.')}</h2>
         </div>
         <div class="feature-list">
           <article>
             <span class="feature-symbol blue"><PenLine size={25} strokeWidth={1.7} /></span>
             <div>
-              <h3>A note that feels like you</h3>
+              <h3>{t('A note that feels like you')}</h3>
               <p>
-                Write in Markdown. Add a #tag. Your words become tidy pages, with lovely type and checklists you can
-                actually tick.
+                {t(
+                  'Write in Markdown. Add a #tag. Your words become tidy pages, with lovely type and checklists you can actually tick.',
+                )}
               </p>
             </div>
           </article>
           <article>
             <span class="feature-symbol mint"><LayoutDashboard size={25} strokeWidth={1.7} /></span>
             <div>
-              <h3>Little plans, moving along</h3>
+              <h3>{t('Little plans, moving along')}</h3>
               <p>
-                Give a project its own board. Move cards from “someday” to “all done,” one satisfying step at a time.
+                {t(
+                  'Give a project its own board. Move cards from “someday” to “all done,” one satisfying step at a time.',
+                )}
               </p>
             </div>
           </article>
           <article>
             <span class="feature-symbol peach"><Paperclip size={25} strokeWidth={1.7} /></span>
             <div>
-              <h3>The bits that go with it</h3>
+              <h3>{t('The bits that go with it')}</h3>
               <p>
-                A photo, a voice note, that very useful PDF. Keep your files with the thought that gives them meaning.
+                {t(
+                  'A photo, a voice note, that very useful PDF. Keep your files with the thought that gives them meaning.',
+                )}
               </p>
             </div>
           </article>
@@ -141,24 +150,25 @@
 
     <section id="playground" class="playground page-width" aria-labelledby="playground-title">
       <div class="playground-copy">
-        <span class="little-label"><PenLine size={15} /> A tiny playground</span>
-        <h2 id="playground-title">Go on.<br />Make a little mess.</h2>
+        <span class="little-label"><PenLine size={15} /> {t('A tiny playground')}</span>
+        <h2 id="playground-title">{t('Go on.')}<br />{t('Make a little mess.')}</h2>
         <p>
-          This is the real editor. Change a sentence, tick a task, or add a file. See how it feels before making
-          yourself at home.
+          {t(
+            'This is the real editor. Change a sentence, tick a task, or add a file. See how it feels before making yourself at home.',
+          )}
         </p>
         <ol class="demo-steps">
-          <li><span>1</span> Write a thought. Start with # for a title.</li>
-          <li><span>2</span> Preview it, then save your note.</li>
-          <li><span>3</span> Try a checkbox. Give it a little star.</li>
+          <li><span>1</span> {t('Write a thought. Start with # for a title.')}</li>
+          <li><span>2</span> {t('Preview it, then save your note.')}</li>
+          <li><span>3</span> {t('Try a checkbox. Give it a little star.')}</li>
         </ol>
         <div class="demo-note">
           <Heart size={16} />
-          <p>Just a practice page.<br /><strong>Your demo resets when you leave.</strong></p>
+          <p>{t('Just a practice page.')}<br /><strong>{t('Your demo resets when you leave.')}</strong></p>
         </div>
       </div>
       <div class="playground-editor">
-        <div class="playground-tab"><span class="status-dot"></span> Your practice notebook</div>
+        <div class="playground-tab"><span class="status-dot"></span> {t('Your practice notebook')}</div>
         <LandingNoteDemo initialNote={data.landingDemoNote} />
       </div>
     </section>
@@ -166,31 +176,32 @@
     <section class="privacy-band" aria-labelledby="privacy-title">
       <div class="privacy-layout page-width">
         <div class="privacy-keepsake" aria-hidden="true">
-          <div class="keepsake-label"><LockKeyhole size={18} /><span>For your eyes only</span></div>
+          <div class="keepsake-label"><LockKeyhole size={18} /><span>{t('For your eyes only')}</span></div>
           <div class="passkey-row">
             <span><Fingerprint size={27} /></span>
-            <div><strong>A familiar hello</strong><small>Your device. Your passkey.</small></div>
+            <div><strong>{t('A familiar hello')}</strong><small>{t('Your device. Your passkey.')}</small></div>
             <span class="keepsake-check"><Check size={16} /></span>
           </div>
           <div class="backup-row">
             <FileText size={23} />
-            <div><strong>My notebook.freshup</strong><small>A password-encrypted backup</small></div>
+            <div><strong>My notebook.freshup</strong><small>{t('A password-encrypted backup')}</small></div>
             <LockKeyhole size={16} />
           </div>
-          <p>Good thoughts, safely tucked away.</p>
+          <p>{t('Good thoughts, safely tucked away.')}</p>
         </div>
         <div class="privacy-copy">
-          <span class="little-label">A little peace of mind</span>
-          <h2 id="privacy-title">Personal means<br />personal.</h2>
+          <span class="little-label">{t('A little peace of mind')}</span>
+          <h2 id="privacy-title">{t('Personal means')}<br />{t('personal.')}</h2>
           <p>
-            Your notebook belongs to your account. Every note and file stays behind sign-in, with no sharing links or
-            public feed.
+            {t(
+              'Your notebook belongs to your account. Every note and file stays behind sign-in, with no sharing links or public feed.',
+            )}
           </p>
           <ul>
-            <li><Fingerprint size={18} /><span>Start with GitHub, then add a passkey for next time.</span></li>
+            <li><Fingerprint size={18} /><span>{t('Start with GitHub, then add a passkey for next time.')}</span></li>
             <li>
               <LockKeyhole size={18} /><span
-                >Download a backup encrypted in your browser. Keep it wherever you feel at home.</span
+                >{t('Download a backup encrypted in your browser. Keep it wherever you feel at home.')}</span
               >
             </li>
           </ul>
@@ -200,8 +211,8 @@
 
     <section class="closing page-width" aria-labelledby="closing-title">
       <div>
-        <span class="little-label">A fresh page is waiting</span>
-        <h2 id="closing-title">What’s on your mind?</h2>
+        <span class="little-label">{t('A fresh page is waiting')}</span>
+        <h2 id="closing-title">{t('What’s on your mind?')}</h2>
       </div>
       <a class="clay-button" href={appHref}>{appLabel}<ArrowRight size={17} /></a>
     </section>
@@ -211,9 +222,9 @@
       ><span class="brand-mark" aria-hidden="true"><img src="/favicon-256x256.png" alt="" /></span><strong>Fresh</strong
       ></a
     >
-    <p>For notes, lists, and the lovely in-between.</p>
+    <p>{t('For notes, lists, and the lovely in-between.')}</p>
     <a class="source-link" href="https://github.com/alkinum/fresh" target="_blank" rel="noreferrer"
-      ><GitHubIcon size={16} /> Open source <span>↗</span></a
+      ><GitHubIcon size={16} /> {t('Open source')} <span>↗</span></a
     >
   </footer>
 </div>

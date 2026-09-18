@@ -1,14 +1,17 @@
 <script lang="ts">
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
   import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
   import { FileText, LayoutDashboard, LoaderCircle, Menu, Plus, Search, Star, X } from '@lucide/svelte';
   import { onDestroy, tick, untrack } from 'svelte';
-  import BackupDialog from '$lib/components/BackupDialog.svelte';
+  import SettingsDialog from '$lib/components/SettingsDialog.svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import KanbanWorkspace from '$lib/components/KanbanWorkspace.svelte';
   import NoteCard from '$lib/components/NoteCard.svelte';
   import NoteComposer from '$lib/components/NoteComposer.svelte';
   import VirtualNoteGrid from '$lib/components/VirtualNoteGrid.svelte';
-  import PasskeyDialog from '$lib/components/PasskeyDialog.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import { authClient } from '$lib/auth-client';
   import { NoteCache } from '$lib/note-cache';
@@ -43,8 +46,9 @@
   let search = $state('');
   let editing = $state<NoteDto | null>(null);
   let sidebarOpen = $state(false);
-  let backupOpen = $state(false);
-  let passkeysOpen = $state(false);
+  let settingsOpen = $state(false);
+  let accountProfilePatch = $state<Partial<typeof data.user>>({});
+  let accountUser = $derived({ ...data.user, ...accountProfilePatch });
   let loading = $state(false);
   let loadError = $state('');
   let composer = $state<NoteComposer>();
@@ -147,7 +151,8 @@
       }
     } catch (error) {
       failed = true;
-      if (!controller.signal.aborted) restoreError = error instanceof Error ? error.message : 'Could not reload notes';
+      if (!controller.signal.aborted)
+        restoreError = error instanceof Error ? error.message : t('Could not reload notes');
     } finally {
       if (restoreController === controller) restoreController = undefined;
       if (
@@ -189,10 +194,10 @@
 
   let workspaceTitle = $derived(
     activeView === 'favorites'
-      ? 'Favorites'
+      ? t('Favorites')
       : activeTagId
-        ? `#${tags.find((tag) => tag.id === activeTagId)?.name ?? 'Tag'}`
-        : 'Your notebook',
+        ? `#${tags.find((tag) => tag.id === activeTagId)?.name ?? t('Tag')}`
+        : t('Your notebook'),
   );
 
   beforeNavigate((navigation) => {
@@ -277,7 +282,7 @@
 
   async function responseError(response: Response): Promise<string> {
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    return body?.error ?? `Request failed (${response.status})`;
+    return body?.error ?? t('Request failed ({status})', { status: response.status });
   }
 
   function filterQuery(page = 1): URLSearchParams {
@@ -324,7 +329,7 @@
       };
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return;
-      if (requestId === notesRequestId) loadError = error instanceof Error ? error.message : 'Could not load notes';
+      if (requestId === notesRequestId) loadError = error instanceof Error ? error.message : t('Could not load notes');
     } finally {
       if (requestId === notesRequestId) loading = false;
     }
@@ -379,7 +384,7 @@
     }
     editing = null;
     if (created && matchesFilter) updateTotalItems(1);
-    showToast(created ? 'Note saved' : 'Note updated');
+    showToast(created ? t('Note saved') : t('Note updated'));
     void refreshTags();
     void loadNotes();
   }
@@ -399,7 +404,7 @@
       } else cacheNotes([updated]);
       void loadNotes();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not update favorite', 'error');
+      showToast(error instanceof Error ? error.message : t('Could not update favorite'), 'error');
     }
   }
 
@@ -413,15 +418,15 @@
   }
 
   function copyNote(note: NoteDto): void {
-    void copyText(note.content, 'Markdown copied', 'Could not copy Markdown');
+    void copyText(note.content, t('Markdown copied'), t('Could not copy Markdown'));
   }
 
   function copyTag(tag: TagDto): void {
-    void copyText(`#${tag.name}`, 'Tag copied', 'Could not copy tag');
+    void copyText(`#${tag.name}`, t('Tag copied'), t('Could not copy tag'));
   }
 
   function copyBoard(board: KanbanBoardSummaryDto): void {
-    void copyText(board.name, 'Board name copied', 'Could not copy board name');
+    void copyText(board.name, t('Board name copied'), t('Could not copy board name'));
   }
 
   async function toggleTask(note: NoteDto, taskIndex: number, checked: boolean): Promise<void> {
@@ -437,7 +442,7 @@
       cacheNotes([updated]);
       if (editing?.id === note.id) editing = updated;
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not update task', 'error');
+      showToast(error instanceof Error ? error.message : t('Could not update task'), 'error');
       throw error;
     }
   }
@@ -445,8 +450,8 @@
   async function deleteNote(note: NoteDto): Promise<void> {
     if (
       !(await confirmation?.ask(
-        'Delete this note?',
-        `“${note.title}” and its attachments will be permanently deleted.`,
+        t('Delete this note?'),
+        t('“{name}” and its attachments will be permanently deleted.', { name: note.title }),
       ))
     )
       return;
@@ -456,25 +461,30 @@
       removeNote(note.id);
       updateTotalItems(-1);
       if (editing?.id === note.id) editing = null;
-      showToast('Note deleted');
+      showToast(t('Note deleted'));
       void refreshTags();
       void loadNotes();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not delete note', 'error');
+      showToast(error instanceof Error ? error.message : t('Could not delete note'), 'error');
     }
   }
 
   async function deleteAttachment(note: NoteDto, attachment: AttachmentDto): Promise<void> {
-    if (!(await confirmation?.ask('Delete this attachment?', `“${attachment.fileName}” will be permanently deleted.`)))
+    if (
+      !(await confirmation?.ask(
+        t('Delete this attachment?'),
+        t('“{name}” will be permanently deleted.', { name: attachment.fileName }),
+      ))
+    )
       return;
     try {
       const response = await fetch(`/api/attachments/${attachment.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(await responseError(response));
       const current = noteCache.peek(note.id) ?? note;
       cacheNotes([{ ...current, attachments: current.attachments.filter((file) => file.id !== attachment.id) }]);
-      showToast('Attachment deleted');
+      showToast(t('Attachment deleted'));
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not delete attachment', 'error');
+      showToast(error instanceof Error ? error.message : t('Could not delete attachment'), 'error');
     }
   }
 
@@ -499,11 +509,11 @@
     if (!(await composer?.canDiscard())) return;
     try {
       const result = await authClient.signOut();
-      if (result.error) throw new Error(result.error.message ?? 'Could not sign out');
+      if (result.error) throw new Error(result.error.message ?? t('Could not sign out'));
       allowNavigation = true;
       location.reload();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not sign out', 'error');
+      showToast(error instanceof Error ? error.message : t('Could not sign out'), 'error');
     }
   }
 
@@ -513,12 +523,12 @@
   }
 </script>
 
-<svelte:head><title>{activeWorkspace === 'notes' ? workspaceTitle : 'Kanban'} | Fresh</title></svelte:head>
+<svelte:head><title>{activeWorkspace === 'notes' ? workspaceTitle : t('Kanban')} | Fresh</title></svelte:head>
 
-<a class="skip-link" href="#app-main">Skip to content</a>
+<a class="skip-link" href="#app-main">{t('Skip to content')}</a>
 <div class="app-shell">
   <Sidebar
-    user={data.user}
+    user={accountUser}
     {tags}
     boards={kanbanBoards}
     {activeWorkspace}
@@ -537,15 +547,11 @@
       createBoardRequest += 1;
       sidebarOpen = false;
     }}
-    onPasskeys={() => {
-      passkeysOpen = true;
+    onSettings={async () => {
       sidebarOpen = false;
+      await tick();
+      settingsOpen = true;
     }}
-    onBackup={() => {
-      backupOpen = true;
-      sidebarOpen = false;
-    }}
-    onLogout={() => void logout()}
     onClose={() => (sidebarOpen = false)}
   />
 
@@ -554,8 +560,8 @@
       <button
         class="icon-button"
         data-modal-fallback-focus
-        aria-label="Open navigation"
-        title="Menu"
+        aria-label={t('Open navigation')}
+        title={t('Menu')}
         onclick={() => (sidebarOpen = true)}
       >
         <Menu size={19} />
@@ -566,8 +572,8 @@
       </div>
       <button
         class="icon-button"
-        aria-label={activeWorkspace === 'notes' ? 'New note' : 'New board'}
-        title={activeWorkspace === 'notes' ? 'New note' : 'New board'}
+        aria-label={activeWorkspace === 'notes' ? t('New note') : t('New board')}
+        title={activeWorkspace === 'notes' ? t('New note') : t('New board')}
         onclick={() => (activeWorkspace === 'notes' ? void focusComposer(null) : (createBoardRequest += 1))}
       >
         {#if activeWorkspace === 'notes'}<Plus size={19} />{:else}<LayoutDashboard size={19} />{/if}
@@ -578,10 +584,12 @@
       <div hidden={activeWorkspace !== 'notes'}>
         <header class="workspace-heading">
           <div>
-            <span class="workspace-eyebrow">A little room to think</span>
+            <span class="workspace-eyebrow">{t('A little room to think')}</span>
             <h1>{workspaceTitle}</h1>
           </div>
-          <button class="secondary-button" onclick={() => void focusComposer(null)}><Plus size={16} /> New note</button>
+          <button class="secondary-button" onclick={() => void focusComposer(null)}
+            ><Plus size={16} /> {t('New note')}</button
+          >
         </header>
       </div>
       <NoteComposer
@@ -596,33 +604,33 @@
       <div hidden={activeWorkspace !== 'notes'}>
         <div class="notes-header">
           <div>
-            <h2>{search.trim() ? 'Search results' : 'Saved notes'}</h2>
+            <h2>{search.trim() ? t('Search results') : t('Saved notes')}</h2>
             <span>{loading ? '…' : pagination.totalItems}</span>
           </div>
           <label class="search-box">
             <Search size={16} />
-            <span class="sr-only">Search notes</span>
+            <span class="sr-only">{t('Search notes')}</span>
             <input
               bind:value={search}
               oninput={searchNotes}
               maxlength="200"
               type="search"
-              placeholder="Search your notebook"
+              placeholder={t('Search your notebook')}
             />
             {#if search}
-              <button aria-label="Clear search" title="Clear" onclick={clearSearch}><X size={14} /></button>
+              <button aria-label={t('Clear search')} title={t('Clear')} onclick={clearSearch}><X size={14} /></button>
             {/if}
           </label>
         </div>
 
         {#if loading && !loadingMore}
-          <p class="notes-feedback" role="status"><LoaderCircle class="spin" size={16} /> Loading notes…</p>
+          <p class="notes-feedback" role="status"><LoaderCircle class="spin" size={16} /> {t('Loading notes…')}</p>
         {/if}
         {#if loadError}
           <div class="notes-feedback error" role="alert">
-            <span>{loadError}</span><button
+            <span>{t(loadError)}</span><button
               class="secondary-button"
-              onclick={() => void loadNotes(retryPage, retryAppend)}>Try again</button
+              onclick={() => void loadNotes(retryPage, retryAppend)}>{t('Try again')}</button
             >
           </div>
         {/if}
@@ -661,7 +669,7 @@
                 disabled={loading}
                 onclick={() => void loadNotes(pagination.currentPage + 1, true)}
               >
-                {loading ? 'Loading...' : 'Load more'}
+                {loading ? t('Loading...') : t('Load more')}
               </button>
             </div>
           {/if}
@@ -674,25 +682,25 @@
             </div>
             <h2>
               {search
-                ? 'No matching notes'
+                ? t('No matching notes')
                 : activeView === 'favorites'
-                  ? 'Keep your favorites close'
+                  ? t('Keep your favorites close')
                   : activeTagId
-                    ? 'No notes with this tag'
-                    : 'Your next note starts here'}
+                    ? t('No notes with this tag')
+                    : t('Your next note starts here')}
             </h2>
             <p>
               {search
-                ? 'Try a different word, tag, or filename.'
+                ? t('Try a different word, tag, or filename.')
                 : activeView === 'favorites'
-                  ? 'Tap the star on a note to find it here.'
-                  : 'Save a thought above. Give it a #tag to make it easy to find.'}
+                  ? t('Tap the star on a note to find it here.')
+                  : t('Save a thought above. Give it a #tag to make it easy to find.')}
             </p>
             <button
               class="secondary-button"
               onclick={() =>
                 search ? clearSearch() : activeView === 'favorites' ? changeView('all') : void focusComposer(null)}
-              >{search ? 'Clear search' : activeView === 'favorites' ? 'Browse notes' : 'Write a note'}</button
+              >{search ? t('Clear search') : activeView === 'favorites' ? t('Browse notes') : t('Write a note')}</button
             >
           </div>
         {/if}
@@ -714,18 +722,14 @@
 
 <ConfirmDialog bind:this={confirmation} />
 
-<BackupDialog
-  open={backupOpen}
+<SettingsDialog
+  open={settingsOpen}
+  user={accountUser}
   hasUnsavedChanges={composer?.hasUnsavedChanges() ?? false}
-  onClose={() => (backupOpen = false)}
-  onComplete={backupImported}
-  onError={(message) => showToast(message, 'error')}
-/>
-
-<PasskeyDialog
-  open={passkeysOpen}
-  onClose={() => (passkeysOpen = false)}
-  onError={(message) => showToast(message, 'error')}
+  onClose={() => (settingsOpen = false)}
+  onProfileChange={(profile) => (accountProfilePatch = { ...accountProfilePatch, ...profile })}
+  onLogout={() => void logout()}
+  onBackupComplete={backupImported}
 />
 
 <p class="sr-only" data-modal-live role="status">{toast?.type === 'success' ? toast.message : ''}</p>
@@ -735,14 +739,18 @@
     class:error={toast.type === 'error'}
     class="toast"
     role="group"
-    aria-label="Notification"
+    aria-label={t('Notification')}
     onmouseenter={pauseToastDismiss}
     onmouseleave={resumeToastDismiss}
     onfocusin={pauseToastDismiss}
     onfocusout={resumeToastDismiss}
   >
-    <span>{toast.message}</span>
-    <button aria-label={`Dismiss notification: ${toast.message}`} title="Dismiss" onclick={dismissToast}>
+    <span>{t(toast.message)}</span>
+    <button
+      aria-label={t('Dismiss notification: {message}', { message: t(toast.message) })}
+      title={t('Dismiss')}
+      onclick={dismissToast}
+    >
       <X size={15} />
     </button>
   </div>

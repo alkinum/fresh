@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
   import { onDestroy } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import {
@@ -136,11 +140,11 @@
             <span title={attachment.fileName}>{attachment.fileName}</span>
             <button
               class="attachment-menu-trigger"
-              aria-label={`Actions for ${attachment.fileName}`}
+              aria-label={t('Actions for {name}', { name: attachment.fileName })}
               aria-haspopup="menu"
               aria-expanded={menu?.attachment.id === attachment.id}
               aria-controls={menu?.attachment.id === attachment.id ? `attachment-menu-${attachment.id}` : undefined}
-              title="Attachment actions"
+              title={t('Attachment actions')}
               onclick={(event) => toggleAttachmentMenu(event, attachment)}
               onkeydown={(event) => openAttachmentMenuFromKeyboard(event, attachment)}
               ><MoreHorizontal size={16} /></button
@@ -160,11 +164,11 @@
           ></audio>
           <button
             class="attachment-menu-trigger"
-            aria-label={`Actions for ${attachment.fileName}`}
+            aria-label={t('Actions for {name}', { name: attachment.fileName })}
             aria-haspopup="menu"
             aria-expanded={menu?.attachment.id === attachment.id}
             aria-controls={menu?.attachment.id === attachment.id ? `attachment-menu-${attachment.id}` : undefined}
-            title="Attachment actions"
+            title={t('Attachment actions')}
             onclick={(event) => toggleAttachmentMenu(event, attachment)}
             onkeydown={(event) => openAttachmentMenuFromKeyboard(event, attachment)}
             ><MoreHorizontal size={16} /></button
@@ -187,11 +191,11 @@
             <span>{attachment.fileName}</span>
             <button
               class="attachment-menu-trigger"
-              aria-label={`Actions for ${attachment.fileName}`}
+              aria-label={t('Actions for {name}', { name: attachment.fileName })}
               aria-haspopup="menu"
               aria-expanded={menu?.attachment.id === attachment.id}
               aria-controls={menu?.attachment.id === attachment.id ? `attachment-menu-${attachment.id}` : undefined}
-              title="Attachment actions"
+              title={t('Attachment actions')}
               onclick={(event) => toggleAttachmentMenu(event, attachment)}
               onkeydown={(event) => openAttachmentMenuFromKeyboard(event, attachment)}
               ><MoreHorizontal size={16} /></button
@@ -211,11 +215,11 @@
           </summary>
           <button
             class="attachment-menu-trigger pdf-menu-trigger"
-            aria-label={`Actions for ${attachment.fileName}`}
+            aria-label={t('Actions for {name}', { name: attachment.fileName })}
             aria-haspopup="menu"
             aria-expanded={menu?.attachment.id === attachment.id}
             aria-controls={menu?.attachment.id === attachment.id ? `attachment-menu-${attachment.id}` : undefined}
-            title="Attachment actions"
+            title={t('Attachment actions')}
             onclick={(event) => toggleAttachmentMenu(event, attachment)}
             onkeydown={(event) => openAttachmentMenuFromKeyboard(event, attachment)}
             ><MoreHorizontal size={16} /></button
@@ -231,10 +235,11 @@
           {/if}
           <div class="attachment-actions">
             <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-            <a href={attachment.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> Open</a>
+            <a href={attachment.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> {t('Open')}</a
+            >
             <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-            <a href={attachment.downloadUrl} download={attachment.fileName}><Download size={14} /> Download</a>
-            <button onclick={() => onDelete(attachment)}><Trash2 size={14} /> Delete</button>
+            <a href={attachment.downloadUrl} download={attachment.fileName}><Download size={14} /> {t('Download')}</a>
+            <button onclick={() => onDelete(attachment)}><Trash2 size={14} /> {t('Delete')}</button>
           </div>
         </details>
       {:else}
@@ -252,11 +257,11 @@
           </div>
           <button
             class="attachment-menu-trigger"
-            aria-label={`Actions for ${attachment.fileName}`}
+            aria-label={t('Actions for {name}', { name: attachment.fileName })}
             aria-haspopup="menu"
             aria-expanded={menu?.attachment.id === attachment.id}
             aria-controls={menu?.attachment.id === attachment.id ? `attachment-menu-${attachment.id}` : undefined}
-            title="Attachment actions"
+            title={t('Attachment actions')}
             onclick={(event) => toggleAttachmentMenu(event, attachment)}
             onkeydown={(event) => openAttachmentMenuFromKeyboard(event, attachment)}
             ><MoreHorizontal size={16} /></button
@@ -270,7 +275,7 @@
 {#if menu}
   <ContextMenu
     id={`attachment-menu-${menu.attachment.id}`}
-    label={`Actions for ${menu.attachment.fileName}`}
+    label={t('Actions for {name}', { name: menu.attachment.fileName })}
     placement={menu.placement}
     returnFocus={menu.returnFocus}
     initialFocus={menu.initialFocus}
@@ -286,7 +291,7 @@
       onclick={() => (menu = null)}
     >
       <ExternalLink size={15} aria-hidden="true" />
-      <span>Open</span>
+      <span>{t('Open')}</span>
     </a>
     <a
       role="menuitem"
@@ -296,13 +301,13 @@
       onclick={() => (menu = null)}
     >
       <Download size={15} aria-hidden="true" />
-      <span>Download</span>
+      <span>{t('Download')}</span>
     </a>
     <!-- eslint-enable svelte/no-navigation-without-resolve -->
     <div role="separator"></div>
     <button class="danger" role="menuitem" tabindex="-1" onclick={deleteMenuAttachment}>
       <Trash2 size={15} aria-hidden="true" />
-      <span>Delete</span>
+      <span>{t('Delete')}</span>
     </button>
   </ContextMenu>
 {/if}

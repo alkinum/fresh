@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { useI18n } from '$lib/i18n.svelte';
+  const i18n = useI18n();
+  const t = i18n.t;
+
   import {
     Bold,
     Braces,
@@ -12,7 +16,7 @@
     PenLine,
     Send,
     Sigma,
-    X
+    X,
   } from '@lucide/svelte';
   import { onDestroy, tick } from 'svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
@@ -32,7 +36,7 @@
     saveContent,
     onSaved,
     onCancel,
-    onError
+    onError,
   }: {
     note?: NoteDto | null;
     hidden?: boolean;
@@ -65,7 +69,7 @@
   let previewAbortController: AbortController | undefined;
 
   const maxAttachmentBytes = 95 * 1024 * 1024;
-  const editorPlaceholder = '# A little room to think\n\nWrite a thought, make a list, or add a file…';
+  const editorPlaceholder = $derived(t('# A little room to think\n\nWrite a thought, make a list, or add a file…'));
 
   export function hasUnsavedChanges(): boolean {
     return saving || pendingFiles.length > 0 || content !== baselineContent;
@@ -73,17 +77,17 @@
 
   export async function canDiscard(): Promise<boolean> {
     if (saving) {
-      onError('Please wait until your note finishes saving.');
+      onError(t('Please wait until your note finishes saving.'));
       return false;
     }
     return (
       !hasUnsavedChanges() ||
       Boolean(
         await confirmation?.ask(
-          'Discard unsaved changes?',
-          'Your latest edits and pending attachments have not been saved.',
-          'Discard changes'
-        )
+          t('Discard unsaved changes?'),
+          t('Your latest edits and pending attachments have not been saved.'),
+          t('Discard changes'),
+        ),
       )
     );
   }
@@ -136,7 +140,7 @@
 
   async function responseError(response: Response): Promise<string> {
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    return body?.error ?? `Request failed (${response.status})`;
+    return body?.error ?? t('Request failed ({status})', { status: response.status });
   }
 
   function cancelPreview(): void {
@@ -176,7 +180,7 @@
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ content: contentSnapshot }),
-          signal: controller.signal
+          signal: controller.signal,
         });
         if (!response.ok) throw new Error(await responseError(response));
         html = ((await response.json()) as { html: string }).html;
@@ -185,7 +189,7 @@
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return;
       if (requestId === previewRequestId) {
-        previewError = error instanceof Error ? error.message : 'Could not render preview';
+        previewError = error instanceof Error ? error.message : t('Could not render preview');
       }
     } finally {
       if (requestId === previewRequestId) {
@@ -203,12 +207,8 @@
     const acceptedFiles = incoming.filter((file) => file.size > 0 && file.size <= maxAttachmentBytes);
     if (emptyFiles.length > 0 || oversizedFiles.length > 0) {
       const messages = [
-        emptyFiles.length > 0
-          ? `${emptyFiles.length} empty ${emptyFiles.length === 1 ? 'file was' : 'files were'} not added.`
-          : '',
-        oversizedFiles.length > 0
-          ? `${oversizedFiles.length} ${oversizedFiles.length === 1 ? 'file exceeds' : 'files exceed'} the 95 MiB limit.`
-          : ''
+        emptyFiles.length > 0 ? t('Empty files skipped: {count}.', { count: emptyFiles.length }) : '',
+        oversizedFiles.length > 0 ? t('Files over the 95 MiB limit: {count}.', { count: oversizedFiles.length }) : '',
       ].filter(Boolean);
       onError(messages.join(' '));
     }
@@ -251,9 +251,9 @@
           'content-type': file.type || 'application/octet-stream',
           'x-file-name': encodeURIComponent(file.name),
           'x-file-size': String(file.size),
-          'x-upload-id': uploadId
+          'x-upload-id': uploadId,
         },
-        body: file
+        body: file,
       });
       if (!response.ok) throw new Error(await responseError(response));
       uploaded.push((await response.json()) as NoteDto['attachments'][number]);
@@ -265,14 +265,14 @@
   async function save(): Promise<void> {
     if (saving) return;
     if (!content.trim()) {
-      contentError = 'Write something before saving.';
+      contentError = t('Write something before saving.');
       showWriteMode();
       await tick();
       textarea?.focus();
       return;
     }
     if (content.length > MAX_NOTE_CONTENT_CHARACTERS) {
-      contentError = 'This note exceeds the 1,000,000 character limit.';
+      contentError = t('This note exceeds the 1,000,000 character limit.');
       return;
     }
     contentError = '';
@@ -299,7 +299,7 @@
       const response = await fetch(noteId ? `/api/notes/${noteId}` : '/api/notes', {
         method: noteId ? 'PATCH' : 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ content })
+        body: JSON.stringify({ content }),
       });
       if (!response.ok) throw new Error(await responseError(response));
       const saved = (await response.json()) as NoteDto;
@@ -309,7 +309,7 @@
       }
       const uploaded = await uploadFiles(saved.id);
       saved.attachments = [
-        ...new Map([...uploaded, ...saved.attachments].map((attachment) => [attachment.id, attachment])).values()
+        ...new Map([...uploaded, ...saved.attachments].map((attachment) => [attachment.id, attachment])).values(),
       ];
       pendingFiles = [];
       draftNoteId = null;
@@ -322,7 +322,7 @@
         mode = 'write';
       }
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Could not save note');
+      onError(error instanceof Error ? error.message : t('Could not save note'));
     } finally {
       saving = false;
     }
@@ -343,89 +343,73 @@
   onDestroy(cancelPreview);
 </script>
 
-<section class="composer" {hidden} aria-label={note ? 'Edit note' : 'New note'}>
+<section class="composer" {hidden} aria-label={note ? t('Edit note') : t('New note')}>
   <div class="composer-heading">
-    <div><PenLine size={16} /><strong>{note ? 'Editing note' : 'A fresh thought'}</strong></div>
-    <span>{note ? note.title : 'Markdown, made simple'}</span>
+    <div><PenLine size={16} /><strong>{note ? t('Editing note') : t('A fresh thought')}</strong></div>
+    <span>{note ? note.title : t('Markdown, made simple')}</span>
   </div>
   <fieldset class="composer-controls" disabled={saving}>
-    <legend class="sr-only">Note editor</legend>
-    <svg class="liquid-glass-defs" aria-hidden="true" focusable="false">
-      <defs>
-        <filter
-          id="fresh-attachment-file-lens"
-          x="-20%"
-          y="-20%"
-          width="140%"
-          height="140%"
-          color-interpolation-filters="sRGB"
-        >
-          <feTurbulence type="fractalNoise" baseFrequency="0.08 0.12" numOctaves="1" seed="17" result="lensMap" />
-          <feDisplacementMap
-            in="SourceGraphic"
-            in2="lensMap"
-            scale="1.6"
-            xChannelSelector="R"
-            yChannelSelector="G"
-            result="refracted"
-          />
-          <feMerge>
-            <feMergeNode in="SourceGraphic" />
-            <feMergeNode in="refracted" />
-          </feMerge>
-        </filter>
-      </defs>
-    </svg>
+    <legend class="sr-only">{t('Note editor')}</legend>
     <div class="format-toolbar">
-      <fieldset class="format-tools" disabled={mode === 'preview'} aria-label="Formatting">
-        <button aria-label="Bold" title="Bold" onclick={() => insertMarkdown('**', '**', 'bold')}
+      <fieldset class="format-tools" disabled={mode === 'preview'} aria-label={t('Formatting')}>
+        <button aria-label={t('Bold')} title={t('Bold')} onclick={() => insertMarkdown('**', '**', 'bold')}
           ><Bold size={16} /></button
         >
-        <button aria-label="Italic" title="Italic" onclick={() => insertMarkdown('_', '_', 'italic')}
+        <button aria-label={t('Italic')} title={t('Italic')} onclick={() => insertMarkdown('_', '_', 'italic')}
           ><Italic size={16} /></button
         >
-        <button aria-label="Title heading" title="Heading 1" onclick={() => insertMarkdown('# ', '', 'Title')}
-          ><Heading1 size={16} /></button
+        <button
+          aria-label={t('Title heading')}
+          title={t('Heading 1')}
+          onclick={() => insertMarkdown('# ', '', t('Title'))}><Heading1 size={16} /></button
         >
-        <button aria-label="List" title="List" onclick={() => insertMarkdown('- ', '', 'item')}
+        <button aria-label={t('List')} title={t('List')} onclick={() => insertMarkdown('- ', '', 'item')}
           ><List size={16} /></button
         >
-        <button aria-label="Task list" title="Task list" onclick={() => insertMarkdown('- [ ] ', '', 'task')}
+        <button aria-label={t('Task list')} title={t('Task list')} onclick={() => insertMarkdown('- [ ] ', '', 'task')}
           ><ListChecks size={16} /></button
         >
-        <button aria-label="Code" title="Code" onclick={() => insertMarkdown('`', '`', 'code')}
+        <button aria-label={t('Code')} title={t('Code')} onclick={() => insertMarkdown('`', '`', 'code')}
           ><Braces size={16} /></button
         >
-        <button aria-label="Link" title="Link" onclick={() => insertMarkdown('[', '](https://)', 'label')}
+        <button aria-label={t('Link')} title={t('Link')} onclick={() => insertMarkdown('[', '](https://)', 'label')}
           ><Link size={16} /></button
         >
-        <button aria-label="Formula" title="KaTeX formula" onclick={() => insertMarkdown('$', '$', 'E = mc^2')}
-          ><Sigma size={16} /></button
+        <button
+          aria-label={t('Formula')}
+          title={t('KaTeX formula')}
+          onclick={() => insertMarkdown('$', '$', 'E = mc^2')}><Sigma size={16} /></button
         >
-        <label class="toolbar-upload" title="Attach files">
+        <label class="toolbar-upload liquid-glass-surface" title={t('Attach files')}>
           <Paperclip size={16} />
-          <span class="sr-only">Attach files</span>
+          <span class="sr-only">{t('Attach files')}</span>
           <input type="file" multiple onchange={addFiles} />
         </label>
       </fieldset>
       <div class="composer-modes">
-        <div class="segmented-control" aria-label="Editor mode">
-          <button class:active={mode === 'write'} aria-pressed={mode === 'write'} onclick={showWriteMode}>
-            <PenLine size={15} /> <span>Write</span>
+        <div class="segmented-control" aria-label={t('Editor mode')}>
+          <button
+            class:active={mode === 'write'}
+            class:liquid-glass-surface={mode === 'write'}
+            aria-pressed={mode === 'write'}
+            onclick={showWriteMode}
+          >
+            <PenLine size={15} /> <span>{t('Write')}</span>
           </button>
           <button
             class:active={mode === 'preview'}
+            class:liquid-glass-surface={mode === 'preview'}
             aria-pressed={mode === 'preview'}
             onclick={() => void renderPreview()}
           >
-            <Eye size={15} /> <span>Preview</span>
+            <Eye size={15} /> <span>{t('Preview')}</span>
           </button>
         </div>
         {#if note}
           <button
             class="icon-button"
-            aria-label="Cancel editing"
-            title="Cancel editing"
+            aria-label={t('Cancel editing')}
+            title={t('Cancel editing')}
             onclick={async () => {
               if (await canDiscard()) onCancel();
             }}
@@ -442,7 +426,7 @@
         bind:value={content}
         oninput={handleInput}
         onkeydown={keyboardSave}
-        aria-label="Note content"
+        aria-label={t('Note content')}
         aria-invalid={contentError ? 'true' : undefined}
         aria-describedby={contentError ? 'note-content-error' : undefined}
         placeholder={editorPlaceholder}
@@ -450,15 +434,15 @@
     {:else}
       <div class="composer-preview markdown-body" class:loading={rendering} aria-busy={rendering}>
         {#if rendering}
-          <span class="muted">Rendering...</span>
+          <span class="muted">{t('Rendering...')}</span>
         {:else if previewError}
-          <p class="composer-error" role="alert">{previewError}</p>
-          <button class="secondary-button" onclick={() => void renderPreview()}>Retry preview</button>
+          <p class="composer-error" role="alert">{t(previewError)}</p>
+          <button class="secondary-button" onclick={() => void renderPreview()}>{t('Retry preview')}</button>
         {:else if previewHtml}
           <!-- eslint-disable-next-line svelte/no-at-html-tags -->
           {@html previewHtml}
         {:else}
-          <span class="muted">Nothing to preview</span>
+          <span class="muted">{t('Nothing to preview')}</span>
         {/if}
       </div>
     {/if}
@@ -468,13 +452,13 @@
     {/if}
 
     {#if pendingFiles.length > 0}
-      <ul class="pending-files" aria-label="Pending attachments">
+      <ul class="pending-files" aria-label={t('Pending attachments')}>
         {#each pendingFiles as file, index (fileKey(file))}
           <li>
             <Paperclip size={13} />
             {file.name}
             <button
-              aria-label={`Remove ${file.name}`}
+              aria-label={t('Remove {name}', { name: file.name })}
               onclick={() => (pendingFiles = pendingFiles.filter((_, i) => i !== index))}
             >
               <X size={13} />
@@ -487,12 +471,12 @@
     <div class="composer-foot">
       <span class="composer-hint"
         >{characterCount
-          ? `${characterCount.toLocaleString()} characters`
-          : 'Start with # for a title. Add #tags to organize.'}</span
+          ? t('{count} characters', { count: characterCount.toLocaleString(i18n.locale) })
+          : t('Start with # for a title. Add #tags to organize.')}</span
       >
       <button class="primary-button" disabled={saving} aria-busy={saving} onclick={() => void save()}>
         <Send size={15} />
-        <span>{saving ? 'Saving...' : note ? 'Update' : 'Save note'}</span>
+        <span>{saving ? t('Saving...') : note ? t('Update') : t('Save note')}</span>
       </button>
     </div>
   </fieldset>
